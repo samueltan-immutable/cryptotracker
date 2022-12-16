@@ -5,6 +5,9 @@ Built to automate the cryptoslam reporting. This tool generates a screenshot of 
 ## Prerequisites
 
 Use node v16+, and install dependancies with `npm i `
+Rename `.env.example` to `.env`
+Make sure your slack bot has OAuth scope to `chat:write` and `files:write` (read more [here](https://api.slack.com/messaging/files))
+Replace 'slack-token' with your bot slack-token (read more [here](https://api.slack.com/authentication/token-types#bot))
 
 ## Run
 
