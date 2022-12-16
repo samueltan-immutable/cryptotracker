@@ -12,6 +12,6 @@
     "graphql-tag": "^2.12.6"
   },
   "scripts": {
-    "screenshot": "ts-node ./src/screenshot.ts"
+    "screenshot": "npx ts-node ./src/lambda-scraper.ts"
   }
 }
