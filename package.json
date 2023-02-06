@@ -4,10 +4,12 @@
     "dotenv": "^16.0.3",
     "got-scraping": "^3.2.10",
     "graphql-tag": "^2.12.6",
-    "puppeteer": "^16.1.0"
+    "puppeteer": "^16.1.0",
+    "yargs": "^17.6.2"
   },
   "devDependencies": {
     "@types/puppeteer": "^5.4.6",
+    "@types/yargs": "^17.0.22",
     "got-scraping": "^3.2.10",
     "graphql-tag": "^2.12.6"
   },

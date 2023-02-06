@@ -1,6 +1,7 @@
 
 //import { Context } from 'aws-lambda';
 //import * as aws from 'aws-sdk';
+import yargs from 'yargs';
 import * as puppeteer from "puppeteer";
 import { gql } from 'graphql-tag';
 import { gotScraping, MaxRedirectsError } from 'got-scraping';
@@ -11,9 +12,52 @@ const token = process.env.SLACK_TOKEN;
 const web = new WebClient(token);
 
 //export const lambdaHandler = async(event: any, context: Context) => {
- 
-(async () => {
-       let attempt = 0;
+
+async function getTableData(
+  page: puppeteer.Page,
+  table: string,
+  period: string
+) {
+  const data = await getDailyTableData(page, table)
+
+  const imx = data.find((element) => element[1] == "ImmutableX") || "";
+  let rank = imx[0];
+  let volume = imx[2];
+  let transactions = imx[3];
+  let buyers = imx[4];
+
+  return `${period} data: IMX Position: ${rank}, volume: ${volume}, buyers: ${buyers}, transactions: ${transactions}`;
+}
+
+async function getDailyTableData(
+  page: puppeteer.Page,
+  table: string,
+) {
+  const wholetable = await page.$(table)
+  const data = await page.$$eval(table, (rows) => {
+    return Array.from(rows, (row) => {
+      const columns = row.querySelectorAll("td");
+      return Array.from(columns, (column) => column.innerText.trim());
+    });
+  });
+
+  return data;
+}
+
+function isCurrency(element: any)
+{
+    let regex = /(?=.*?\d)^\$?(([1-9]\d{0,2}(,\d{3})*)|\d+)?(\.\d{1,2})?$/;
+    return regex.test(element);
+}
+
+function delay(time: number) {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, time);
+  });
+}
+
+async function main(debugFlag?: string, showFlag?: string) {
+    let attempt = 0;
     do {
       attempt++;
       try {
@@ -65,36 +109,55 @@ const web = new WebClient(token);
                 console.log('Change month ' + lastmonthdate)
                 lastmonthdatestring = lastmonthdate.toISOString().split("T")[0];
             }
-            const browser = await puppeteer.launch({
-                //use the installed browser instead of Puppeteer's built in one
-                //executablePath: '/usr/bin/google-chrome',
-                defaultViewport: { width: 1920, height: 1080 }, // set browser size (this is the default for testing)
-                //Uncomment if you need to visually see what puppeteer is doing
-                //headless:false,
-                //slowMo: 200
-            });
+            let browser
 
+            if (showFlag == "true") {
+                browser = await puppeteer.launch({
+                    //use the installed browser instead of Puppeteer's built in one
+                    //executablePath: '/usr/bin/google-chrome',
+                    defaultViewport: { width: 1920, height: 1080 }, // set browser size (this is the default for testing)
+                    //Uncomment if you need to visually see what puppeteer is doing
+                    headless:false,
+                    slowMo: 200
+                });
+            } else
+            {
+                browser = await puppeteer.launch({
+                    //use the installed browser instead of Puppeteer's built in one
+                    //executablePath: '/usr/bin/google-chrome',
+                    defaultViewport: { width: 1920, height: 1080 }, // set browser size (this is the default for testing)
+                    //Uncomment if you need to visually see what puppeteer is doing
+                    //headless:false,
+                    //slowMo: 200
+                });    
+            }
+
+            
             const screenshotPath = "img/cryptoslam - "+ date + ".png";
             // selectors
-            const tableSelector =
-                ".css-18bewgf > div:nth-child(1)";
-            const sevenDaySelector =
-                "div.css-1hkzn7e:nth-child(2) > p:nth-child(1)";
-            const thirtyDaySelector =
-                "div.css-1hkzn7e:nth-child(3) > p:nth-child(1)";
-            const dayTableSelector =
+
+            //ranking table on the main page right hand section
+            const rankingTable =
                 ".css-18bewgf > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2)";
+            
+            //7 Days data toggle on top left hand option bar
+            const sevenDaySelector =
+                "div.css-1hkzn7e:nth-child(2)";
+
+            //30 Days data toggle on top left hand option bar
+            const thirtyDaySelector =
+                "div.css-1hkzn7e:nth-child(3)";
+
+            //Daily data table after line graph
+            const dailyDataTable =
+                ".css-18bewgf > div:nth-child(1) > div:nth-child(2) > div:nth-child(1)";
+
             const sevenDayTableSelector =
                 ".css-18bewgf > div:nth-child(1)";
             const thirtyDayTableSelector =
                 ".css-18bewgf > div:nth-child(1)";
-            const imx_sevenDayTableSelectorSpecific =
-                ".css-18bewgf > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) > span:nth-child(1)";
-            const imx_thirtyDayTableSelectorSpecific =
-                ".css-18bewgf > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) > span:nth-child(1) > a:nth-child(1)"; 
-                const imx_Selector =
-                "immutablex";
-            const dailySelector = "tr"
+           
+            const dailySelector = "MuiDataGrid-row"
             const url = "https://www.cryptoslam.io"
             const thisMonthDailyUrl = url + "/blockchains/immutablex?month=" + date.substring(0, 7);
             const lastMonthDailyUrl = url + "/blockchains/immutablex?month=" + lastmonthdatestring.substring(0, 7);
@@ -118,7 +181,7 @@ const web = new WebClient(token);
             */
             
             console.log("Get specific protocol ranking table on the page...")
-            const table = await page.$(tableSelector); // get the table
+            const table = await page.$(rankingTable); // get the table
 
             console.log("Take screenshot...")
             await table?.screenshot({
@@ -127,6 +190,139 @@ const web = new WebClient(token);
             console.log("Screenshot saved to: ./" + screenshotPath);
 
             console.log("Getting Cryptoslam data...")
+            
+            //Grab data from ranking table for later
+            let datatwentyfourhr = await  page.$$eval(dailyDataTable, (rows) => {
+                return Array.from(rows, (row) => {
+                const columns = row.querySelectorAll("a");
+                return Array.from(columns, (column) => column.innerText.trim());
+                });
+            });
+
+            const c_today = now
+
+            //use ranking data collected earlier
+            datatwentyfourhr = datatwentyfourhr[0].map((_, colIndex) => datatwentyfourhr.map(row => row[colIndex]));
+            //console.table(datatwentyfourhr)
+            datatwentyfourhr = datatwentyfourhr.filter((item) => item[0]);
+            let numofeleements = datatwentyfourhr.findIndex(isCurrency)
+            let twentyfourhourranking  = datatwentyfourhr.findIndex((value) => value.toString() === "ImmutableX")+ 1
+            console.log ('24Hr ranking - ' + twentyfourhourranking)
+            console.log ('First currency value found at ' + numofeleements)
+            let twentyfourHourTradingData: { chain: string, tradevol: string}[] = []
+            let i: number = 0
+            while (i<numofeleements) {
+                twentyfourHourTradingData.push({"chain": datatwentyfourhr[i].toString(), "tradevol": datatwentyfourhr[i+numofeleements].toString()})
+                i++;
+            }
+            
+            console.table(twentyfourHourTradingData)
+
+            let c_twentyfourhourTradeVolume: number = 0
+            let needtwentyfourhourfromdaily: boolean = false
+            try {
+                //check if IMX in the top 20 list and use the data there
+                let c_imx_twentyfourhour = twentyfourHourTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
+                c_twentyfourhourTradeVolume = Number(c_imx_twentyfourhour.tradevol.replace(/[^0-9.-]+/g, ''))
+                console.table(c_twentyfourhourTradeVolume)
+            } catch(e)
+            {
+                //if not in the top 20 list then use the aggregate data from daily data
+                console.log ('ImmutableX not in the top 20 for 24 hr data')
+                console.log ('Revert to daily data summary')
+                
+                c_today.setDate(now.getDate())
+                if (now != c_today) {
+                    console.log ('Daily data missing today')
+                    c_twentyfourhourTradeVolume = 0
+                } else needtwentyfourhourfromdaily = true
+                //c_dailyTradeDate = daily[0][0];
+            }
+
+            
+            //7 day data from table
+
+            await page.click(sevenDaySelector);
+            await delay(5000);
+            let dataSevenDay = await page.$$eval(sevenDayTableSelector, (rows) => {
+                return Array.from(rows, (row) => {
+                const columns = row.querySelectorAll("a");
+                return Array.from(columns, (column) => column.innerText.trim());
+                });
+            });
+            dataSevenDay = dataSevenDay[0].map((_, colIndex) => dataSevenDay.map(row => row[colIndex]));  
+            dataSevenDay = dataSevenDay.filter((item) => item[0]);
+            //console.table(dataSevenDay)
+
+            numofeleements = dataSevenDay.findIndex(isCurrency)
+            let sevendayranking = dataSevenDay.findIndex((value) => value.toString() === "ImmutableX") +1
+            console.log ('7 Day ranking - ' + sevendayranking)
+            
+            console.log ('First currency value found at ' + numofeleements)
+            let sevenDayTradingData: { chain: string, tradevol: string}[] = []
+            i=0;
+            while (i<numofeleements) {
+                sevenDayTradingData.push({"chain": dataSevenDay[i].toString(), "tradevol": dataSevenDay[i+numofeleements].toString()})
+                i++;
+            }
+            console.table(sevenDayTradingData)
+            let c_sevendayTradeVolume: number = 0
+            let needsevendayfromdaily: boolean = false
+            try {
+                //check if IMX in the top 20 list and use the data there
+                let c_imx_sevenday = sevenDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
+                c_sevendayTradeVolume = Number(c_imx_sevenday.tradevol.replace(/[^0-9.-]+/g, ''))
+                console.table(c_imx_sevenday)
+            } catch(e)
+            {
+                //if not in the top 20 list then use the aggregate data from daily data
+                console.log ('ImmutableX not in the top 20 for 7 day data')
+                console.log ('Revert to daily data summary')
+                needsevendayfromdaily = true
+            }
+
+
+            //30 day data from table
+            await page.click(thirtyDaySelector);
+            await delay(5000);
+            let dataThirtyDay = await page.$$eval(thirtyDayTableSelector, (rows) => {
+                return Array.from(rows, (row) => {
+                const columns = row.querySelectorAll("a");
+                return Array.from(columns, (column) => column.innerText.trim());
+                });
+            });
+            dataThirtyDay = dataThirtyDay[0].map((_, colIndex) => dataThirtyDay.map(row => row[colIndex]));
+            dataThirtyDay = dataThirtyDay.filter((item) => item[0]);
+            //console.table(dataThirtyDay)
+            let thirtydayranking = dataThirtyDay.findIndex((value) => value.toString() === "ImmutableX") +1
+            console.log ('30 Day ranking - ' + thirtydayranking)
+            
+            numofeleements = dataThirtyDay.findIndex(isCurrency)
+            console.log ('First currency value found at ' + numofeleements)
+            let thirtyDayTradingData: { chain: string, tradevol: string}[] = []
+            i=0;
+            while (i<numofeleements) {
+                thirtyDayTradingData.push({"chain": dataThirtyDay[i].toString(), "tradevol": dataThirtyDay[i+numofeleements].toString()})
+                i++;
+            }
+            console.table(thirtyDayTradingData)
+
+            let c_thirtydayTradeVolume: number = 0
+            let needthirtydayfromdaily: boolean = false
+            try {
+                //check if IMX in the top 20 list and use the data there
+                let c_imx_thirtyday = thirtyDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
+                c_thirtydayTradeVolume = Number(c_imx_thirtyday.tradevol.replace(/[^0-9.-]+/g, ''))
+                console.table(c_imx_thirtyday)
+            } catch(e)
+            {
+                //if not in the top 20 list then use the aggregate data from daily data
+                console.log ('ImmutableX not in the top 20 for 30 day data')
+                console.log ('Revert to daily data summary')
+                needthirtydayfromdaily = true
+            }
+                
+            console.log("")            
 
             console.log('Opening page: ' + thisMonthDailyUrl)
             let daily
@@ -134,8 +330,15 @@ const web = new WebClient(token);
                 await page.goto(thisMonthDailyUrl); // load the daily summary url
                 console.log("Getting daily summary data (this takes 5s)...")
                 await delay(5000); // wait 5s as this page is shit
-            
-                daily =  await getDailyTableData(page, dailySelector)
+
+                daily = await page.$$eval(dailySelector, (rows) => {
+                    return Array.from(rows, (row) => {
+                    const columns = row.querySelectorAll("a");
+                    return Array.from(columns, (column) => column.innerText.trim());
+                    });
+                });
+                console.table(daily)
+                //daily =  await getDailyTableData(page, dailySelector)
                 daily = daily.filter((item) => item[0]);
                 if (daily.length==0) throw Error
 
@@ -166,154 +369,49 @@ const web = new WebClient(token);
             } 
             console.table(daily)
 
-            if (daily.length<30) {
-                console.log("Not enough data for 30 day aggregate. Something has gone wrong loading the page")
-                return
-            }
+            if (needtwentyfourhourfromdaily){
 
-            const c_today = new Date(daily[0][0])
-
-            console.log('Opening page: ' + url)
-            await page.goto(url);
-            console.log("Waiting for 1 second...")
-            await delay(1000);
-
-            let datatwentyfourhr = await  page.$$eval(dayTableSelector, (rows) => {
-                return Array.from(rows, (row) => {
-                const columns = row.querySelectorAll("a");
-                return Array.from(columns, (column) => column.innerText.trim());
-                });
-            });
-            datatwentyfourhr = datatwentyfourhr[0].map((_, colIndex) => datatwentyfourhr.map(row => row[colIndex]));
-            //console.table(datatwentyfourhr)
-            datatwentyfourhr = datatwentyfourhr.filter((item) => item[0]);
-            let numofeleements = datatwentyfourhr.findIndex(isCurrency)
-            let twentyfourhourranking  = datatwentyfourhr.findIndex((value) => value.toString() === "ImmutableX")+ 1
-            console.log ('24Hr ranking - ' + twentyfourhourranking)
-            console.log ('First currency value found at ' + numofeleements)
-            let twentyfourHourTradingData: { chain: string, tradevol: string}[] = []
-            let i: number = 0
-            while (i<numofeleements) {
-                twentyfourHourTradingData.push({"chain": datatwentyfourhr[i].toString(), "tradevol": datatwentyfourhr[i+numofeleements].toString()})
-                i++;
-            }
-            
-            console.table(twentyfourHourTradingData)
-
-            let c_twentyfourhourTradeVolume: number
-            try {
-                //check if IMX in the top 20 list and use the data there
-                let c_imx_twentyfourhour = twentyfourHourTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
-                c_twentyfourhourTradeVolume = Number(c_imx_twentyfourhour.tradevol.replace(/[^0-9.-]+/g, ''))
-                console.table(c_twentyfourhourTradeVolume)
-            } catch(e)
-            {
-                //if not in the top 20 list then use the aggregate data from daily data
-                console.log ('ImmutableX not in the top 20 for 24 hr data')
-                console.log ('Revert to daily data summary')
-                //c_dailyTradeBuyers = daily[0][2];
-                //c_dailyTradeTransactions = daily[0][4];
-                c_today.setDate(now.getDate())
-                if (now != c_today) {
-                console.log ('Daily data missing today')
-                c_twentyfourhourTradeVolume = 0
-                } else c_twentyfourhourTradeVolume = Number(daily[0][1].replace(/[^0-9.-]+/g, ''));
-                //c_dailyTradeDate = daily[0][0];
+                c_twentyfourhourTradeVolume = Number(daily[0][1].replace(/[^0-9.-]+/g, ''));
             }
 
             // print the daily data
             console.log("Cryptoslam - Daily trading data: " + formatterCurrency.format(c_twentyfourhourTradeVolume)
             + " trades on " + c_today.toISOString().split("T")[0]);
-            
-            //7 day data from table
 
-            await page.click(sevenDaySelector);
-            let dataSevenDay = await page.$$eval(sevenDayTableSelector, (rows) => {
-                return Array.from(rows, (row) => {
-                const columns = row.querySelectorAll("a");
-                return Array.from(columns, (column) => column.innerText.trim());
-                });
-            });
-            dataSevenDay = dataSevenDay[0].map((_, colIndex) => dataSevenDay.map(row => row[colIndex]));  
-            dataSevenDay = dataSevenDay.filter((item) => item[0]);
-            //console.table(dataSevenDay)
-
-            numofeleements = dataSevenDay.findIndex(isCurrency)
-            let sevendayranking = dataSevenDay.findIndex((value) => value.toString() === "ImmutableX") +1
-            console.log ('7 Day ranking - ' + sevendayranking)
-            
-            console.log ('First currency value found at ' + numofeleements)
-            let sevenDayTradingData: { chain: string, tradevol: string}[] = []
-            i=0;
-            while (i<numofeleements) {
-                sevenDayTradingData.push({"chain": dataSevenDay[i].toString(), "tradevol": dataSevenDay[i+numofeleements].toString()})
-                i++;
-            }
-            console.table(sevenDayTradingData)
-            let c_sevendayTradeVolume: number
-            try {
-                //check if IMX in the top 20 list and use the data there
-                let c_imx_sevenday = sevenDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
-                c_sevendayTradeVolume = Number(c_imx_sevenday.tradevol.replace(/[^0-9.-]+/g, ''))
-                console.table(c_imx_sevenday)
-            } catch(e)
+            if (needsevendayfromdaily)
             {
-                //if not in the top 20 list then use the aggregate data from daily data
-                console.log ('ImmutableX not in the top 20 for 7 day data')
-                console.log ('Revert to daily data summary')
                 const sevendaydaily = daily.slice(0,7)
                 console.table(sevendaydaily)
 
                 c_sevendayTradeVolume = sevendaydaily.reduce((previous, current)=> previous+Number(current[1].replace(/[^0-9.-]+/g, '')),0);
             }
-
             console.log ('Cryptoslam - 7 Day data: Trade volume - ' + formatterCurrency.format(c_sevendayTradeVolume))
 
-            //30 day data from table
-            await page.click(thirtyDaySelector);
-            await delay(5000);
-            let dataThirtyDay = await page.$$eval(thirtyDayTableSelector, (rows) => {
-                return Array.from(rows, (row) => {
-                const columns = row.querySelectorAll("a");
-                return Array.from(columns, (column) => column.innerText.trim());
-                });
-            });
-            dataThirtyDay = dataThirtyDay[0].map((_, colIndex) => dataThirtyDay.map(row => row[colIndex]));
-            dataThirtyDay = dataThirtyDay.filter((item) => item[0]);
-            //console.table(dataThirtyDay)
-            let thirtydayranking = dataThirtyDay.findIndex((value) => value.toString() === "ImmutableX") +1
-            console.log ('30 Day ranking - ' + thirtydayranking)
-            
-            numofeleements = dataThirtyDay.findIndex(isCurrency)
-            console.log ('First currency value found at ' + numofeleements)
-            let thirtyDayTradingData: { chain: string, tradevol: string}[] = []
-            i=0;
-            while (i<numofeleements) {
-                thirtyDayTradingData.push({"chain": dataThirtyDay[i].toString(), "tradevol": dataThirtyDay[i+numofeleements].toString()})
-                i++;
-            }
-            console.table(thirtyDayTradingData)
-
-            let c_thirtydayTradeVolume: number
-            try {
-                //check if IMX in the top 20 list and use the data there
-                let c_imx_thirtyday = thirtyDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
-                c_thirtydayTradeVolume = Number(c_imx_thirtyday.tradevol.replace(/[^0-9.-]+/g, ''))
-                console.table(c_imx_thirtyday)
-            } catch(e)
+            if (needthirtydayfromdaily)
             {
-                //if not in the top 20 list then use the aggregate data from daily data
-                console.log ('ImmutableX not in the top 20 for 30 day data')
-                console.log ('Revert to daily data summary')
+
                 const thirtydaydaily = daily.slice(0,30)
                 console.table(thirtydaydaily)
 
                 c_thirtydayTradeVolume = thirtydaydaily.reduce((previous, current)=> previous+Number(current[1].replace(/[^0-9.-]+/g, '')),0);
             }
-
             console.log ('Cryptoslam - 30 Day data: Trade volume - ' + formatterCurrency.format(c_thirtydayTradeVolume))
-                
-            console.log("")
+
+            //skip this exit check
+            /**
+            if (daily.length<30) {
+                console.log("Not enough data for 30 day aggregate. Something has gone wrong loading the page")
+                await page.close();
+                await browser.close();  
+                return {
+                    statusCode: 400,
+                    body: 'Error. Insufficient data.'
+                  }
+            }
+
+            const c_today = new Date(daily[0][0])
+            */
+            
             console.log("Cryptoslam data retrieved")
             await page.close();
             await browser.close();  
@@ -399,7 +497,20 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
             //#deal-cryptoslam - https://hooks.slack.com/services/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
             //#ecosytem team - https://hooks.slack.com/services/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
             //Example curl -X POST -H 'Content-type: application/json' --data '{"text":"Hello, World!"}' https://hooks.slack.com/services/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
+            
+            console.log('Check Slack auth')
+            console.log (await web.auth.test())
+            
+            //exit here if debub flag is set to true
+            if (debugFlag == "true") {
+                console.log("Debug mode complete. No post to slack")
+                return {
+                    statusCode: 200,
+                    body: 'Debug complete'
+                  }
+            }
 
+            
             console.log("Posting to Slack...")
 
             //Slack SDK push to post message and upload file
@@ -407,8 +518,6 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
             //#wg-imx-user-rewards - C03NCT02NLC
             //#deal-cryptoslam - C03AT6FF1GQ
             
-            console.log('Check Slack auth')
-            console.log (await web.auth.test())
             
             console.log ('Check Slack token length - ' + web.token?.length)
             const resultSlackUpload = await web.files.uploadV2({
@@ -419,7 +528,7 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
                 channel_id: 'C03AT6FF1GQ', //prod - C03AT6FF1GQ // testing - C04B1PCTXEH
                 initial_comment: summarymsg,
                 title: 'Cryptoslam data check - ' + date
-              });
+            });
             // `result may contain multiple files uploaded
             console.log('File(s) uploaded: ', resultSlackUpload.files);
 
@@ -434,9 +543,9 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
                     channel_id: 'C03NCT02NLC', 
                     initial_comment: summarymsg,
                     title: 'Cryptoslam data check - ' + date
-                  });
-                  console.log('File(s) uploaded: ', resultSlackUpload2.files);
-                }
+                });
+                console.log('File(s) uploaded: ', resultSlackUpload2.files);
+                }            
             
 /*
 //Back-up approach Posting via Slack webhooks. No file upload
@@ -526,48 +635,19 @@ Max error rate ${formatterPercentage.format(maxpctError)}"
       statusCode: 400,
       body: 'Error'
     }
-  
-})();
-
-async function getTableData(
-  page: puppeteer.Page,
-  table: string,
-  period: string
-) {
-  const data = await getDailyTableData(page, table)
-
-  const imx = data.find((element) => element[1] == "ImmutableX") || "";
-  let rank = imx[0];
-  let volume = imx[2];
-  let transactions = imx[3];
-  let buyers = imx[4];
-
-  return `${period} data: IMX Position: ${rank}, volume: ${volume}, buyers: ${buyers}, transactions: ${transactions}`;
+    
 }
+const argv = yargs(process.argv.slice(2))
+.usage('Usage: -d <debug_flag> -s <show_flag>')
+.options({
+   d: { describe: 'debug flag', type: 'string', demandOption: false },
+   s: { describe: 'show working flag', type: 'string', demandOption: false }
+})
+.parseSync();
 
-async function getDailyTableData(
-  page: puppeteer.Page,
-  table: string,
-) {
-  const wholetable = await page.$(table)
-  const data = await page.$$eval(table, (rows) => {
-    return Array.from(rows, (row) => {
-      const columns = row.querySelectorAll("td");
-      return Array.from(columns, (column) => column.innerText.trim());
-    });
-  });
-
-  return data;
-}
-
-function isCurrency(element: any)
-{
-    let regex = /(?=.*?\d)^\$?(([1-9]\d{0,2}(,\d{3})*)|\d+)?(\.\d{1,2})?$/;
-    return regex.test(element);
-}
-
-function delay(time: number) {
-  return new Promise(function (resolve) {
-    setTimeout(resolve, time);
-  });
-}
+main(argv.d, argv.s)
+.then(() => console.log('CryptoTracker Scraper Complete'))
+.catch(err => {
+  console.error(err);
+  process.exit(1);
+});
