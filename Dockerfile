@@ -1,4 +1,4 @@
-FROM node:slim AS app
+FROM --platform=linux/amd64 node:slim AS app
 
 WORKDIR /app
 COPY . .
@@ -22,4 +22,4 @@ RUN npm install --production
 #RUN yarn install --production
 #RUN chmod -R o+rwx node_modules/puppeteer/.local-chromium
 
-CMD ["npx", "ts-node", "./src/lambda-scraper.ts"]
+RUN npm run screenshot

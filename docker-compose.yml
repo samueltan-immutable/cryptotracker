@@ -1,0 +1,16 @@
+version: '3.7'
+
+services:
+  cryptotracker-docker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    volumes:
+      - ./src:/home/node/app/src
+    container_name: cryptotracker-docker
+    expose:
+      - '4000'
+    ports:
+      - '4000:4000'
+    command: npm run dev
