@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install gnupg wget -y && \
 # Install your app here...
 COPY ["package.json", "package-lock.json*", "./"]
 
-RUN npm install --production
+RUN npm install
 #RUN yarn install --production
 #RUN chmod -R o+rwx node_modules/puppeteer/.local-chromium
 

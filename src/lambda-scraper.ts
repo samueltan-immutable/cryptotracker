@@ -114,21 +114,34 @@ async function main(debugFlag?: string, showFlag?: string) {
             if (showFlag == "true") {
                 browser = await puppeteer.launch({
                     //use the installed browser instead of Puppeteer's built in one
-                    //executablePath: '/usr/bin/google-chrome',
+                    executablePath: '/usr/bin/google-chrome',
                     defaultViewport: { width: 1920, height: 1080 }, // set browser size (this is the default for testing)
                     //Uncomment if you need to visually see what puppeteer is doing
                     headless:false,
-                    slowMo: 200
+                    slowMo: 200,
+                    args: [
+                        "--disable-gpu",
+                        "--disable-dev-shm-usage",
+                        "--disable-setuid-sandbox",
+                        "--no-sandbox",
+                    ]
                 });
             } else
             {
                 browser = await puppeteer.launch({
                     //use the installed browser instead of Puppeteer's built in one
-                    //executablePath: '/usr/bin/google-chrome',
+                    executablePath: '/usr/bin/google-chrome',
                     defaultViewport: { width: 1920, height: 1080 }, // set browser size (this is the default for testing)
                     //Uncomment if you need to visually see what puppeteer is doing
                     //headless:false,
-                    //slowMo: 200
+                    //slowMo: 200,
+                    headless:true,
+                    args: [
+                        "--disable-gpu",
+                        "--disable-dev-shm-usage",
+                        "--disable-setuid-sandbox",
+                        "--no-sandbox",
+                    ]
                 });    
             }
 

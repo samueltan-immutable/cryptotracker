@@ -9,8 +9,9 @@ services:
     volumes:
       - ./src:/home/node/app/src
     container_name: cryptotracker-docker
+    platform: linux/amd64
     expose:
       - '4000'
     ports:
       - '4000:4000'
-    command: npm run dev
+    command: npm run screenshot_debug
