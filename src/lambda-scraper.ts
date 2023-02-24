@@ -110,11 +110,12 @@ async function main(debugFlag?: string, showFlag?: string) {
                 lastmonthdatestring = lastmonthdate.toISOString().split("T")[0];
             }
             let browser
-
+            
             if (showFlag == "true") {
+                console.log('Launching visible puppeteer')
                 browser = await puppeteer.launch({
                     //use the installed browser instead of Puppeteer's built in one
-                    executablePath: '/usr/bin/google-chrome',
+                    //executablePath: '/usr/bin/google-chrome',
                     defaultViewport: { width: 1920, height: 1080 }, // set browser size (this is the default for testing)
                     //Uncomment if you need to visually see what puppeteer is doing
                     headless:false,
@@ -126,8 +127,10 @@ async function main(debugFlag?: string, showFlag?: string) {
                         "--no-sandbox",
                     ]
                 });
-            } else
+            } 
+            else if (showFlag == "docker") 
             {
+                console.log('Launching docker puppeteer')
                 browser = await puppeteer.launch({
                     //use the installed browser instead of Puppeteer's built in one
                     executablePath: '/usr/bin/google-chrome',
@@ -135,17 +138,32 @@ async function main(debugFlag?: string, showFlag?: string) {
                     //Uncomment if you need to visually see what puppeteer is doing
                     //headless:false,
                     //slowMo: 200,
+                    //ignoreHTTPSErrors :true,
                     headless:true,
                     args: [
                         "--disable-gpu",
                         "--disable-dev-shm-usage",
                         "--disable-setuid-sandbox",
                         "--no-sandbox",
+                        '--single-process',
                     ]
+                });    
+            } else
+            {
+                console.log('Launching headless default puppeteer')
+                browser = await puppeteer.launch({
+                    //use the installed browser instead of Puppeteer's built in one
+                    //executablePath: '/usr/bin/chromium-browser',
+                    defaultViewport: { width: 1920, height: 1080 }, // set browser size (this is the default for testing)
+                    //Uncomment if you need to visually see what puppeteer is doing
+                    //headless:false,
+                    //slowMo: 200,
+                    headless:true
                 });    
             }
 
             
+            console.log('Setup target divs')
             const screenshotPath = "img/cryptoslam - "+ date + ".png";
             // selectors
 
