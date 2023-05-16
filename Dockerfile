@@ -1,4 +1,4 @@
-FROM node:16-slim AS app
+FROM --platform=linux/amd64 node:16-slim AS app
 
 # We don't need the standalone Chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
