@@ -4,51 +4,29 @@
 import yargs from 'yargs';
 import * as puppeteer from "puppeteer";
 import { gql } from 'graphql-tag';
-import { gotScraping, MaxRedirectsError } from 'got-scraping';
+import { gotScraping } from 'got-scraping';
 import './utils/env';
 import { WebClient } from '@slack/web-api';
 
 const token = process.env.SLACK_TOKEN;
+// selectors
+//ranking table on the main page right hand section
+const rankingTable =process.env.CSS_RANKING_TABLE_WHEADER;
+
+//7 Days data toggle on top left hand option bar
+const sevenDaySelector=process.env.CSS_SEVEN_DAY_SELECTOR;
+
+//30 Days data toggle on top left hand option bar
+const thirtyDaySelector =process.env.CSS_THIRTY_DAY_SELECTOR;
+
+//Daily data table after line graph
+const dailyDataTable =process.env.CSS_RANKING_TABLE;
+const sevenDayTableSelector =process.env.CSS_RANKING_TABLE;
+const thirtyDayTableSelector =process.env.CSS_RANKING_TABLE;
+
 const web = new WebClient(token);
 
 //export const lambdaHandler = async(event: any, context: Context) => {
-
-async function getTableData(
-  page: puppeteer.Page,
-  table: string,
-  period: string
-) {
-  const data = await getDailyTableData(page, table)
-
-  const imx = data.find((element) => element[1] == "ImmutableX") || "";
-  let rank = imx[0];
-  let volume = imx[2];
-  let transactions = imx[3];
-  let buyers = imx[4];
-
-  return `${period} data: IMX Position: ${rank}, volume: ${volume}, buyers: ${buyers}, transactions: ${transactions}`;
-}
-
-async function getDailyTableData(
-  page: puppeteer.Page,
-  table: string,
-) {
-  const wholetable = await page.$(table)
-  const data = await page.$$eval(table, (rows) => {
-    return Array.from(rows, (row) => {
-      const columns = row.querySelectorAll("td");
-      return Array.from(columns, (column) => column.innerText.trim());
-    });
-  });
-
-  return data;
-}
-
-function isCurrency(element: any)
-{
-    let regex = /(?=.*?\d)^\$?(([1-9]\d{0,2}(,\d{3})*)|\d+)?(\.\d{1,2})?$/;
-    return regex.test(element);
-}
 
 function delay(time: number) {
   return new Promise(function (resolve) {
@@ -96,8 +74,9 @@ async function main(debugFlag?: string, showFlag?: string) {
             
             const variables = { address: "global" }
             const now = new Date();
-
+            const c_today = now
             const date = now.toISOString().split("T")[0]; // get a path-safe date
+
             var lastmonthdate = new Date();
             lastmonthdate.setDate(1);
             let lastmonthdatestring = lastmonthdate.toISOString().split("T")[0];
@@ -161,37 +140,11 @@ async function main(debugFlag?: string, showFlag?: string) {
                     headless:true
                 });    
             }
-
             
+            //Take screenshot
             console.log('Setup target divs')
-            const screenshotPath = "img/cryptoslam - "+ date + ".png";
-            // selectors
-
-            //ranking table on the main page right hand section
-            const rankingTable =
-                ".css-4spr0x > div:nth-child(1)";
-            
-            //7 Days data toggle on top left hand option bar
-            const sevenDaySelector =
-                "div.css-1hkzn7e:nth-child(2)";
-
-            //30 Days data toggle on top left hand option bar
-            const thirtyDaySelector =
-                "div.css-1hkzn7e:nth-child(3)";
-
-            //Daily data table after line graph
-            const dailyDataTable =
-                ".css-4spr0x > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1)";
-
-            const sevenDayTableSelector =
-                ".css-4spr0x > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1)";
-            const thirtyDayTableSelector =
-                ".css-4spr0x > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1)";
-           
-            //const dailySelector = "MuiDataGrid-row"
+            const screenshotPath = "img/cryptoslam - "+ date + ".png";                       
             const url = "https://www.cryptoslam.io"
-            //const thisMonthDailyUrl = url + "/blockchains/immutablex?month=" + date.substring(0, 7);
-            //const lastMonthDailyUrl = url + "/blockchains/immutablex?month=" + lastmonthdatestring.substring(0, 7);
             
             console.log("Opening cryptoslam...")
             const page = await browser.newPage();
@@ -199,19 +152,12 @@ async function main(debugFlag?: string, showFlag?: string) {
             await page.goto(url);
             console.log("Waiting for 1 second...")
             await delay(1000);
-
-            //trying to force the lazy load to initiate before the pop up
-            //console.log("Scroll down a bit to load any lazy loading images...")
-            //await page.evaluate('window.scrollBy(0, 200)');
-
-            /* trying to wait for a certain load event
-            console.log("Waiting for dom to be loaded...")
-            await page.waitForNavigation({
-                waitUntil: 'load',
-            });
-            */
-            
+          
             console.log("Get specific protocol ranking table on the page...")
+            if (rankingTable == undefined) return {
+                statusCode: 400,
+                body: 'Error: missing ranking table css config'
+              }
             const table = await page.$(rankingTable); // get the table
 
             console.log("Take screenshot...")
@@ -220,53 +166,27 @@ async function main(debugFlag?: string, showFlag?: string) {
             });
             console.log("Screenshot saved to: ./" + screenshotPath);
 
+            //Pull data from ranking table
             console.log("Getting Cryptoslam data...")
             
-            //Grab data from ranking table for later
-            let datatwentyfourhr: String[][]
-            try{
-                datatwentyfourhr = await page.$$eval(dailyDataTable, (rows) => {
-                    return Array.from(rows, (row) => {
-                    const columns = row.querySelectorAll("a");
-                    return Array.from(columns, (column) => column.innerText.trim());
-                    });
-                });
+            if (dailyDataTable == undefined) return {
+                statusCode: 400,
+                body: 'Error: missing daily data css config'
+              }
 
-                datatwentyfourhr = datatwentyfourhr[0].map((_, colIndex) => datatwentyfourhr.map(row => row[colIndex]));
-                console.table(datatwentyfourhr)
-                datatwentyfourhr = datatwentyfourhr.filter((item) => item[0]);
-                console.table(datatwentyfourhr)
-            } catch (e) {
-                console.log ('Twentyfour hr css selected error')
-                return {
-                    statusCode: 400,
-                    body: 'twentyfour hr css selector error'
-                  }
+            let datatwentyfourhr = await page.$$eval(dailyDataTable, (rows) => {
+                return Array.from(rows, (row) => {
+                const columns = row.querySelectorAll("a");
+                return Array.from(columns, (column) => column.innerText.trim());
+                })})
 
-            }
-            
-
-            const c_today = now
-
-            //use ranking data collected earlier
-            
-            if (showFlag == "true") console.table(datatwentyfourhr)
-            
-            //old way
-            //let numofeleements = datatwentyfourhr.findIndex(isCurrency)
-            let numofeleements = datatwentyfourhr.length
-            //let twentyfourhourranking  = datatwentyfourhr.findIndex((value) => value.toString() === "ImmutableX")+ 1
-            //console.log ('24Hr ranking - ' + twentyfourhourranking)
-            console.log ('First currency value found at ' + numofeleements)
+            datatwentyfourhr = datatwentyfourhr[0].map((_, colIndex) => datatwentyfourhr.map(row => row[colIndex]));
+            datatwentyfourhr = datatwentyfourhr.filter((item) => item[0]);
+                        
             let twentyfourHourTradingData: { chain: string, tradevol: string}[] = []
             let i: number = 0
-            //when all chains were pulled in a row and then all trading volume
-            //while (i<numofeleements) {
-            //    twentyfourHourTradingData.push({"chain": datatwentyfourhr[i].toString(), "tradevol": datatwentyfourhr[i+numofeleements].toString()})
-             //   i++;
-            //}
-            //when one chain was pulled in a row and then the chains trading volume
-            while (i<numofeleements) {
+
+            while (i<datatwentyfourhr.length) {
                 twentyfourHourTradingData.push({"chain": datatwentyfourhr[i].toString(), "tradevol": datatwentyfourhr[i+1].toString()})
                 i=i+2;
             }
@@ -274,236 +194,101 @@ async function main(debugFlag?: string, showFlag?: string) {
             console.table(twentyfourHourTradingData)
 
             let c_twentyfourhourTradeVolume: number = 0
-            let needtwentyfourhourfromdaily: boolean = false
             let twentyfourhourranking: number = 0
-            try {
-                //check if IMX in the top 20 list and use the data there
-                let c_imx_twentyfourhour = twentyfourHourTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
-                twentyfourhourranking  = twentyfourHourTradingData.findIndex(chain => chain.chain ==="ImmutableX")+1
-                console.log ('24Hr ranking - ' + twentyfourhourranking)
-                c_twentyfourhourTradeVolume = Number(c_imx_twentyfourhour.tradevol.replace(/[^0-9.-]+/g, ''))
-                console.table(c_twentyfourhourTradeVolume)
-            } catch(e)
-            {
-                //if not in the top 20 list then use the aggregate data from daily data
-                console.log ('ImmutableX not in the top 20 for 24 hr data')
-                
-                c_today.setDate(now.getDate())
-                if (now != c_today) {
-                    console.log ('Daily data missing today')
-                    c_twentyfourhourTradeVolume = 0
-                } else needtwentyfourhourfromdaily = true
-                //c_dailyTradeDate = daily[0][0];
-            }
-
-            
+            let c_imx_twentyfourhour = twentyfourHourTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
+            twentyfourhourranking  = twentyfourHourTradingData.findIndex(chain => chain.chain ==="ImmutableX")+1
+            console.log ('24Hr ranking - ' + twentyfourhourranking)
+            c_twentyfourhourTradeVolume = Number(c_imx_twentyfourhour.tradevol.replace(/[^0-9.-]+/g, ''))
+            console.log('24Hr trade volume - ' + c_imx_twentyfourhour.tradevol)
+                        
             //7 day data from table
-            if (showFlag == "true") console.log('Processing 7 day data')
+            console.log('Processing 7 day data')
+
+            if (sevenDaySelector == undefined) return {
+                statusCode: 400,
+                body: 'Error: missing seven day selector css config'
+              }
 
             await page.click(sevenDaySelector);
             await delay(5000);
-            let dataSevenDay: String[][]
-            try{
-                dataSevenDay = await page.$$eval(sevenDayTableSelector, (rows) => {
-                    return Array.from(rows, (row) => {
-                    const columns = row.querySelectorAll("a");
-                    return Array.from(columns, (column) => column.innerText.trim());
-                    });
+            
+            if (sevenDayTableSelector == undefined) return {
+                statusCode: 400,
+                body: 'Error: missing seven day ranking table selector css config'
+              }
+            let dataSevenDay = await page.$$eval(sevenDayTableSelector, (rows) => {
+                return Array.from(rows, (row) => {
+                const columns = row.querySelectorAll("a");
+                return Array.from(columns, (column) => column.innerText.trim());
                 });
+            });
 
-                dataSevenDay = dataSevenDay[0].map((_, colIndex) => dataSevenDay.map(row => row[colIndex]));  
-                dataSevenDay = dataSevenDay.filter((item) => item[0]);
-
-            } catch (e) {
-                console.log ('Seven day css selected error')
-                return {
-                    statusCode: 400,
-                    body: 'Seven day css selector error'
-                  }
-
-            }
+            dataSevenDay = dataSevenDay[0].map((_, colIndex) => dataSevenDay.map(row => row[colIndex]));  
+            dataSevenDay = dataSevenDay.filter((item) => item[0]);
             
-            //console.table(dataSevenDay)
-
-            numofeleements = dataSevenDay.length
-            
-            console.log ('First currency value found at ' + numofeleements)
             let sevenDayTradingData: { chain: string, tradevol: string}[] = []
             i=0;
-            while (i<numofeleements) {
+            while (i<dataSevenDay.length) {
                 sevenDayTradingData.push({"chain": dataSevenDay[i].toString(), "tradevol": dataSevenDay[i+1].toString()})
                 i=i+2;
             }
             console.table(sevenDayTradingData)
+
             let c_sevendayTradeVolume: number = 0
-            let needsevendayfromdaily: boolean = false
             let sevendayranking: number = 0
-            try {
-                //check if IMX in the top 20 list and use the data there
-                let c_imx_sevenday = sevenDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
-                sevendayranking = sevenDayTradingData.findIndex((value) => value.chain === "ImmutableX") +1
-                console.log ('7 Day ranking - ' + sevendayranking)
-                c_sevendayTradeVolume = Number(c_imx_sevenday.tradevol.replace(/[^0-9.-]+/g, ''))
-                console.table(c_imx_sevenday)
-            } catch(e)
-            {
-                //if not in the top 20 list then use the aggregate data from daily data
-                console.log ('ImmutableX not in the top 20 for 7 day data')
-                console.log ('Revert to daily data summary')
-                needsevendayfromdaily = true
-            }
+            //check if IMX in the top 20 list and use the data there
+            let c_imx_sevenday = sevenDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
+            sevendayranking = sevenDayTradingData.findIndex((value) => value.chain === "ImmutableX") +1
+            console.log ('7 Day ranking - ' + sevendayranking)
+            c_sevendayTradeVolume = Number(c_imx_sevenday.tradevol.replace(/[^0-9.-]+/g, ''))
+            console.log('7 Day trade volume - ' + c_imx_sevenday.tradevol)
 
 
+            if (thirtyDaySelector == undefined) return {
+                statusCode: 400,
+                body: 'Error: missing thirty day selector css config'
+              }
             //30 day data from table
             await page.click(thirtyDaySelector);
             await delay(5000);
 
-            let dataThirtyDay: String[][]
-            try{
-                dataThirtyDay = await page.$$eval(thirtyDayTableSelector, (rows) => {
-                    return Array.from(rows, (row) => {
-                    const columns = row.querySelectorAll("a");
-                    return Array.from(columns, (column) => column.innerText.trim());
-                    });
-                });
-                dataThirtyDay = dataThirtyDay[0].map((_, colIndex) => dataThirtyDay.map(row => row[colIndex]));
-                dataThirtyDay = dataThirtyDay.filter((item) => item[0]);
-            } catch (e) {
-                console.log ('Thirty Day css selected error')
-                return {
-                    statusCode: 400,
-                    body: 'Thirty Day css selector error'
-                  }
+            if (thirtyDayTableSelector == undefined) return {
+                statusCode: 400,
+                body: 'Error: missing thirty day ranking table css config'
+              }
 
-            }
+            let dataThirtyDay = await page.$$eval(thirtyDayTableSelector, (rows) => {
+                return Array.from(rows, (row) => {
+                const columns = row.querySelectorAll("a");
+                return Array.from(columns, (column) => column.innerText.trim());
+                });
+            });
+            dataThirtyDay = dataThirtyDay[0].map((_, colIndex) => dataThirtyDay.map(row => row[colIndex]));
+            dataThirtyDay = dataThirtyDay.filter((item) => item[0]);            
             
-            
-            //console.table(dataThirtyDay)
-            
-            numofeleements = dataThirtyDay.length
-            console.log ('First currency value found at ' + numofeleements)
             let thirtyDayTradingData: { chain: string, tradevol: string}[] = []
             i=0;
-            while (i<numofeleements) {
+            while (i<dataThirtyDay.length) {
                 thirtyDayTradingData.push({"chain": dataThirtyDay[i].toString(), "tradevol": dataThirtyDay[i+1].toString()})
                 i=i+2;
             }
             console.table(thirtyDayTradingData)
 
             let c_thirtydayTradeVolume: number = 0
-            //let needthirtydayfromdaily: boolean = false
             let thirtydayranking: number = 0
-            try {
-                //check if IMX in the top 20 list and use the data there
-                let c_imx_thirtyday = thirtyDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
-                thirtydayranking = thirtyDayTradingData.findIndex((value) => value.chain === "ImmutableX")+1
-                console.log ('30 Day ranking - ' + thirtydayranking)
-                c_thirtydayTradeVolume = Number(c_imx_thirtyday.tradevol.replace(/[^0-9.-]+/g, ''))
-                console.table(c_imx_thirtyday)
-            } catch(e)
-            {
-                //if not in the top 20 list then use the aggregate data from daily data
-                console.log ('ImmutableX not in the top 20 for 30 day data')
-                console.log ('Revert to daily data summary')
-                //needthirtydayfromdaily = true
-            }
-                
-            console.log("")            
-/**
-            console.log('Opening page: ' + thisMonthDailyUrl)
-            let daily
-            try {
-                await page.goto(thisMonthDailyUrl); // load the daily summary url
-                console.log("Getting daily summary data (this takes 5s)...")
-                await delay(5000); // wait 5s as this page is shit
-
-                daily = await page.$$eval(dailySelector, (rows) => {
-                    return Array.from(rows, (row) => {
-                    const columns = row.querySelectorAll("a");
-                    return Array.from(columns, (column) => column.innerText.trim());
-                    });
-                });
-                console.table(daily)
-                //daily =  await getDailyTableData(page, dailySelector)
-                daily = daily.filter((item) => item[0]);
-                if (daily.length==0) throw Error
-
-            } catch (e)
-            {
-                //try again but wait 10s this time
-                console.log("Failed to fetch the first time so trying again (this takes 5s)...")
-                await delay(10000); // wait 10s as this page is shit
-            
-                daily =  await getDailyTableData(page, dailySelector)
-
-            }
-            
-            //remove blank lines
-            daily = daily.filter((item) => item[0]);
-            //console.table(daily)
-
-            //make sure we have enough data to make 30 day aggregate otherwise go get last month
-            if (daily.length < 30) {
-                console.log("Getting daily summary data from last month since we don't have enough data (this takes 5s)...")
-                console.log('Opening page: ' + lastMonthDailyUrl)
-                await page.goto(lastMonthDailyUrl); // load the daily summary url
-                console.log("Getting daily summary data (this takes 5s)...")
-                await delay(5000); // wait 5s as this page is shit
-                daily = daily.concat(await getDailyTableData(page, dailySelector)).filter((item) => item[0]);
-                daily = daily.filter((item) => item[0])
-                //console.table(daily)
-            } 
-            console.table(daily)
-
-            if (needtwentyfourhourfromdaily){
-
-                c_twentyfourhourTradeVolume = Number(daily[0][1].replace(/[^0-9.-]+/g, ''));
-            }
-
-            // print the daily data
-            console.log("Cryptoslam - Daily trading data: " + formatterCurrency.format(c_twentyfourhourTradeVolume)
-            + " trades on " + c_today.toISOString().split("T")[0]);
-
-            if (needsevendayfromdaily)
-            {
-                const sevendaydaily = daily.slice(0,7)
-                console.table(sevendaydaily)
-
-                c_sevendayTradeVolume = sevendaydaily.reduce((previous, current)=> previous+Number(current[1].replace(/[^0-9.-]+/g, '')),0);
-            }
-            console.log ('Cryptoslam - 7 Day data: Trade volume - ' + formatterCurrency.format(c_sevendayTradeVolume))
-
-            if (needthirtydayfromdaily)
-            {
-
-                const thirtydaydaily = daily.slice(0,30)
-                console.table(thirtydaydaily)
-
-                c_thirtydayTradeVolume = thirtydaydaily.reduce((previous, current)=> previous+Number(current[1].replace(/[^0-9.-]+/g, '')),0);
-            }
-            console.log ('Cryptoslam - 30 Day data: Trade volume - ' + formatterCurrency.format(c_thirtydayTradeVolume))
-**/
-            //skip this exit check
-            /**
-            if (daily.length<30) {
-                console.log("Not enough data for 30 day aggregate. Something has gone wrong loading the page")
-                await page.close();
-                await browser.close();  
-                return {
-                    statusCode: 400,
-                    body: 'Error. Insufficient data.'
-                  }
-            }
-
-            const c_today = new Date(daily[0][0])
-            */
-            
+            //check if IMX in the top 20 list and use the data there
+            let c_imx_thirtyday = thirtyDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
+            thirtydayranking = thirtyDayTradingData.findIndex((value) => value.chain === "ImmutableX")+1
+            console.log ('30 Day ranking - ' + thirtydayranking)
+            c_thirtydayTradeVolume = Number(c_imx_thirtyday.tradevol.replace(/[^0-9.-]+/g, ''))
+            console.log('30 Day trade volume - ' + c_imx_thirtyday.tradevol)
+        
+            console.log("")  
             console.log("Cryptoslam data retrieved")
+            //clean up puppeteer
             await page.close();
             await browser.close();  
-            console.log("")
-
-            console.log("");
+            console.log("") 
             
             console.log("Getting Immutascan data...")
             const data: any = await gotScraping('https://3vkyshzozjep5ciwsh2fvgdxwy.appsync-api.us-west-2.amazonaws.com/graphql', {
@@ -604,7 +389,6 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
             //#wg-imx-user-rewards - C03NCT02NLC
             //#deal-cryptoslam - C03AT6FF1GQ
             
-            
             console.log ('Check Slack token length - ' + web.token?.length)
             const resultSlackUpload = await web.files.uploadV2({
                 file: screenshotPath,  // also accepts Buffer or ReadStream
@@ -617,7 +401,6 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
             });
             // `result may contain multiple files uploaded
             console.log('File(s) uploaded: ', resultSlackUpload.files);
-
             
             //posting to WG rewards channel
             if (maxpctError > 0.05) { //prod 0.5 //test 1.0
@@ -631,92 +414,27 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
                     title: 'Cryptoslam data check - ' + date
                 });
                 console.log('File(s) uploaded: ', resultSlackUpload2.files);
-                }            
+                }         
             
-/*
-//Back-up approach Posting via Slack webhooks. No file upload
-            const bodybuilding = `{
-                "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                    "type": "mrkdwn",
-                    "text": "Quick data check (Cryptoslam v Immutascan)
-• Last 24 hours (Rank ${twentyfourhourranking}) -  ${formatterCurrency.format(c_twentyfourhourTradeVolume)} v  ${formatterCurrency.format(i_twentyfourhourTradeVolume)} (${formatterPercentage.format(pct24hrVolume)}) 
-• Last 7 days   (Rank ${sevendayranking}) -  ${formatterCurrency.format(c_sevendayTradeVolume)} v  ${formatterCurrency.format(i_sevendayTradeVolume)} (${formatterPercentage.format(pct7dayVolume)}) 
-• Last 30 days  (Rank ${thirtydayranking}) - ${formatterCurrency.format(c_thirtydayTradeVolume)} v ${formatterCurrency.format(i_thirtydayTradeVolume)} (${formatterPercentage.format(pct30dayVolume)}) 
-
-Max error rate ${formatterPercentage.format(maxpctError)}"
-                    }
-                }
-                ]
-            }
-            `*/
-            /*
-            console.log('Export body:' + bodybuilding)
-            //webhook push to post message
-            //posting to ecosystem team channel
-            const slackresponse1: any = await gotScraping('https://hooks.slack.com/services/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', {
-                // we are expecting a JSON response back
-                responseType: 'text',
-                // we must use a post request
-                method: 'POST',
-                // this is where we pass in our token
-                headers: { 'Content-Type': 'application/json' },
-                // here is our query with our variables
-                body: bodybuilding,
-            }).catch(function(e) {
-                console.log('Error thrown')
-                console.log(e.body)
-            });
-            console.log('Slack message posted - ' + slackresponse1.statusCode)
-            
-            //posting to cryptoslam deal channel
-            const slackresponse2: any = await gotScraping('https://hooks.slack.com/services/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', {
-                // we are expecting a JSON response back
-                responseType: 'text',
-                // we must use a post request
-                method: 'POST',
-                // this is where we pass in our token
-                headers: { 'Content-Type': 'application/json' },
-                // here is our query with our variables
-                body: bodybuilding,
-            }).catch(function(e) {
-                console.log('Error thrown')
-                console.log(e.body)
-            });
-            console.log('Slack message posted - ' + slackresponse2.statusCode)
-
-            //posting to WG rewards channel
-            if (maxpctError > 0.05) {
-                const slackresponse3: any = await gotScraping('https://hooks.slack.com/services/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', {
-                    // we are expecting a JSON response back
-                    responseType: 'text',
-                    // we must use a post request
-                    method: 'POST',
-                    // this is where we pass in our token
-                    headers: { 'Content-Type': 'application/json' },
-                    // here is our query with our variables
-                    body: bodybuilding,
-                }).catch(function(e) {
-                    console.log('Error thrown')
-                    console.log(e.body)
-                });
-            console.log('Slack message posted - ' + slackresponse3.statusCode)
-            }
-            */
         return {
           statusCode: 200,
           body: screenshotPath
         }
       } catch (err) {
         console.log('Error:', err);
-        if (attempt <= 1) {
+        if (attempt <= 2) {
           console.log('Trying again');
         }
       }
-    } while (attempt <= 1)
+    } while (attempt <= 2)
     
+    const result = await web.chat.postMessage({
+        channel: 'C04B1PCTXEH', //prod - C03AT6FF1GQ // testing - C04B1PCTXEH
+        text: 'Error in Cryptotracker job',
+        });
+
+    console.log(result)
+
     return {
       statusCode: 400,
       body: 'Error'
