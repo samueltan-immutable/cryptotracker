@@ -71,7 +71,8 @@ async function main(debugFlag?: string, showFlag?: string) {
             })
 
             //console.log ('Test ' + isCurrency ("$1,199,692"))
-            
+            console.log ('v1.0 Running')
+
             const variables = { address: "global" }
             const now = new Date();
             const c_today = now
@@ -179,18 +180,31 @@ async function main(debugFlag?: string, showFlag?: string) {
                 const columns = row.querySelectorAll("a");
                 return Array.from(columns, (column) => column.innerText.trim());
                 })})
+            
+            //added console logging to debug issues
+            if (debugFlag == "true") {
+                console.table(datatwentyfourhr)
+            }
 
+            //transpose table
             datatwentyfourhr = datatwentyfourhr[0].map((_, colIndex) => datatwentyfourhr.map(row => row[colIndex]));
-            datatwentyfourhr = datatwentyfourhr.filter((item) => item[0]);
+            //added console logging to debug issues
+            if (debugFlag == "true") {
+                console.table(datatwentyfourhr)
+            }
+            //datatwentyfourhr = datatwentyfourhr.filter((item) => item[0]);
                         
             let twentyfourHourTradingData: { chain: string, tradevol: string}[] = []
             let i: number = 0
 
-            while (i<datatwentyfourhr.length) {
+            //added console logging to debug issues
+            if (debugFlag == "true") {
+                console.log(datatwentyfourhr.length)
+            }
+            while ((i<datatwentyfourhr.length) && (i %2===0)) {
                 twentyfourHourTradingData.push({"chain": datatwentyfourhr[i].toString(), "tradevol": datatwentyfourhr[i+1].toString()})
                 i=i+2;
             }
-            
             console.table(twentyfourHourTradingData)
 
             let c_twentyfourhourTradeVolume: number = 0
@@ -228,7 +242,7 @@ async function main(debugFlag?: string, showFlag?: string) {
             
             let sevenDayTradingData: { chain: string, tradevol: string}[] = []
             i=0;
-            while (i<dataSevenDay.length) {
+            while (i<dataSevenDay.length && (i %2===0)) {
                 sevenDayTradingData.push({"chain": dataSevenDay[i].toString(), "tradevol": dataSevenDay[i+1].toString()})
                 i=i+2;
             }
@@ -268,7 +282,7 @@ async function main(debugFlag?: string, showFlag?: string) {
             
             let thirtyDayTradingData: { chain: string, tradevol: string}[] = []
             i=0;
-            while (i<dataThirtyDay.length) {
+            while (i<dataThirtyDay.length && (i %2===0)) {
                 thirtyDayTradingData.push({"chain": dataThirtyDay[i].toString(), "tradevol": dataThirtyDay[i+1].toString()})
                 i=i+2;
             }
@@ -428,13 +442,20 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
       }
     } while (attempt <= 2)
     
-    const result = await web.chat.postMessage({
-        channel: 'C04B1PCTXEH', //prod - C03AT6FF1GQ // testing - C04B1PCTXEH
-        text: 'Error in Cryptotracker job',
-        });
-
-    console.log(result)
-
+    if (debugFlag == "true") {
+        console.log("Debug mode complete. No post to slack")
+        return {
+            statusCode: 200,
+            body: 'Debug complete'
+          }
+    } else {
+        const result = await web.chat.postMessage({
+            channel: 'C04B1PCTXEH', //prod - C03AT6FF1GQ // testing - C04B1PCTXEH
+            text: 'Error in Cryptotracker job',
+            });
+        console.log(result)
+    }
+    
     return {
       statusCode: 400,
       body: 'Error'
