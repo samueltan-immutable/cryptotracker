@@ -27,4 +27,4 @@ RUN npm install
 #RUN yarn install --production
 #RUN chmod -R o+rwx node_modules/puppeteer/.local-chromium
 
-#RUN npm run screenshot
+RUN npm run screenshot_docker
