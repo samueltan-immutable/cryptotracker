@@ -17,7 +17,7 @@
   "scripts": {
     "screenshot": "npx ts-node ./src/lambda-scraper.ts",
     "screenshot_debug": "npx ts-node ./src/lambda-scraper.ts -d true",
-    "screenshot_docker": "npx ts-node ./src/lambda-scraper.ts -s docker -d true"
+    "screenshot_docker": "npx ts-node ./src/lambda-scraper.ts -s docker -d false"
   },
   "noImplicitAny": false
 }

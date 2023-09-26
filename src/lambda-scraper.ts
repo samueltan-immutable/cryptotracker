@@ -24,6 +24,10 @@ const dailyDataTable =process.env.CSS_RANKING_TABLE;
 const sevenDayTableSelector =process.env.CSS_RANKING_TABLE;
 const thirtyDayTableSelector =process.env.CSS_RANKING_TABLE;
 
+//Immutascan graphql endpoint
+const immmutascanGraphQLEndpoint = process.env.IMMUTASCAN_GRAPHQL_ENDPOINT;
+const immmutascanGraphQLAPIKey = process.env.IMMUTASCAN_GRAPHQL_APIKEY;
+
 const web = new WebClient(token);
 
 //export const lambdaHandler = async(event: any, context: Context) => {
@@ -305,13 +309,13 @@ async function main(debugFlag?: string, showFlag?: string) {
             console.log("") 
             
             console.log("Getting Immutascan data...")
-            const data: any = await gotScraping('https://3vkyshzozjep5ciwsh2fvgdxwy.appsync-api.us-west-2.amazonaws.com/graphql', {
+            const data: any = await gotScraping(immmutascanGraphQLEndpoint as string, {
                 // we are expecting a JSON response back
                 responseType: 'json',
                 // we must use a post request
                 method: 'POST',
                 // this is where we pass in our token
-                headers: { 'x-api-key': "da2-exzypwa6hng45btg7cwf323cdm", 'Content-Type': 'application/json' },
+                headers: { 'x-api-key': immmutascanGraphQLAPIKey, 'Content-Type': 'application/json' },
                 // here is our query with our variables
                 body: JSON.stringify({ query: GET_LATEST.loc?.source.body, variables }),
             }).catch(function(e) {
