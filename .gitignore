@@ -3,3 +3,4 @@
 .env
 *.zip
 */img/*
+.DS_Store

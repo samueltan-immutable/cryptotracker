@@ -21,7 +21,7 @@ exports.handler = async (event, context) => {
                         },
                         {
                             "name": "CSS_RANKING_TABLE_WHEADER",
-                            "value": ".css-1ayfwsn > div:nth-child(1)"
+                            "value": "div.MuiPaper-root:nth-child(2) > div:nth-child(1)"
                         },
                         {
                             "name": "CSS_SEVEN_DAY_SELECTOR",
@@ -33,7 +33,7 @@ exports.handler = async (event, context) => {
                         },
                         {
                             "name": "CSS_RANKING_TABLE",
-                            "value": ".css-1ayfwsn > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1)"                        
+                            "value": "div.MuiPaper-root:nth-child(2) > div:nth-child(1) > table:nth-child(1) > tbody:nth-child(2)"                        
                         },
                         {
                             "name": "IMMUTASCAN_GRAPHQL_ENDPOINT",
@@ -41,7 +41,7 @@ exports.handler = async (event, context) => {
                         },
                         {
                             "name": "IMMUTASCAN_GRAPHQL_APIKEY",
-                            "value": "da2-2xc46nv5njaszgwrb24jhmeavm"                        
+                            "value": "da2-ceptv3udhzfmbpxr3eqisx3coe"                        
                         }
                     
                     ]
