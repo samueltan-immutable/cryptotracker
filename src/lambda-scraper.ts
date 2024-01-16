@@ -398,7 +398,6 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
                     body: 'Debug complete'
                   }
             }
-
             
             console.log("Posting to Slack...")
 
@@ -434,6 +433,25 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
                 console.log('File(s) uploaded: ', resultSlackUpload2.files);
                 }         
             
+            const errormsg = `Data discrepancy > 5% in last 24 hours (Cryptoslam v Immutascan)
+• Last 24 hours (Rank ${twentyfourhourranking}) -  ${formatterCurrency.format(c_twentyfourhourTradeVolume)} v  ${formatterCurrency.format(i_twentyfourhourTradeVolume)} (${formatterPercentage.format(pct24hrVolume)}) 
+• Last 7 days   (Rank ${sevendayranking}) -  ${formatterCurrency.format(c_sevendayTradeVolume)} v  ${formatterCurrency.format(i_sevendayTradeVolume)} (${formatterPercentage.format(pct7dayVolume)}) 
+• Last 30 days  (Rank ${thirtydayranking}) - ${formatterCurrency.format(c_thirtydayTradeVolume)} v ${formatterCurrency.format(i_thirtydayTradeVolume)} (${formatterPercentage.format(pct30dayVolume)})`
+
+            //posting to Cryptoslam shared comms channel
+            if (pct24hrVolume < -0.05) { //prod 0.5 //test 1.0
+                const resultSlackUpload2 = await web.files.uploadV2({
+                    file: screenshotPath,  // also accepts Buffer or ReadStream
+                    filename: "cryptoslam_immutable - "+ date + ".png",
+                    // Note that channels still works but going with channel_id="C12345" is recommended.
+                    // channels="C111,C222" is no longer supported. In this case, an exception will be thrown 
+                    channel_id: 'C02LJPASEKE', 
+                    initial_comment: errormsg,
+                    title: 'Immutable + Cryptoslam data issue - ' + date
+                });
+                console.log('File(s) uploaded: ', resultSlackUpload2.files);
+                }     
+
         return {
           statusCode: 200,
           body: screenshotPath
