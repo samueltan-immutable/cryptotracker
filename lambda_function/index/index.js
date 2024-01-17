@@ -42,6 +42,22 @@ exports.handler = async (event, context) => {
                         {
                             "name": "IMMUTASCAN_GRAPHQL_APIKEY",
                             "value": "da2-ceptv3udhzfmbpxr3eqisx3coe"                        
+                        },
+                        {
+                            "name": "SLACK_FREQ",
+                            "value": "daily"                        
+                        },
+                        {
+                            "name": "DEBUG",
+                            "value": "ciwgdc"                        
+                        },
+                        {
+                            "name": "INTERNAL_ERROR_THRESHOLD",
+                            "value": "0.05"                        
+                        },
+                        {
+                            "name": "EXTERNAL_ERROR_THRESHOLD",
+                            "value": "0.05"                        
                         }
                     
                     ]

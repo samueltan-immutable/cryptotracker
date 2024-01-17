@@ -28,6 +28,10 @@ const thirtyDayTableSelector =process.env.CSS_RANKING_TABLE;
 const immmutascanGraphQLEndpoint = process.env.IMMUTASCAN_GRAPHQL_ENDPOINT;
 const immmutascanGraphQLAPIKey = process.env.IMMUTASCAN_GRAPHQL_APIKEY;
 
+//Slack message error threshold 
+const internal_error_threshold = Number(process.env.INTERNAL_ERROR_THRESHOLD);
+const external_error_threshold = Number(process.env.EXTERNAL_ERROR_THRESHOLD);
+
 const web = new WebClient(token);
 
 //export const lambdaHandler = async(event: any, context: Context) => {
@@ -40,9 +44,25 @@ function delay(time: number) {
 
 async function main(debugFlag?: string, showFlag?: string) {
     let attempt = 0;
+    if (debugFlag == "") {debugFlag = process.env.DEBUG }
+    else debugFlag = "tp"
+
     do {
       attempt++;
       try {
+        const now = new Date();
+        const freqFlag = process.env.SLACK_FREQ
+        if ((freqFlag == 'daily') && (now.getUTCHours() != 0)) {
+            return {
+                statusCode: 200,
+                body: 'Skip: not the right time to run'
+              }
+        } else if ((freqFlag == 'weekly') && (now.getDay() != 0)) {
+            return {
+                statusCode: 200,
+                body: 'Skip: not the right time to run'
+              }
+            }
         
         const GET_LATEST = gql`
             query getMetricsAll($address: String!) {
@@ -73,12 +93,12 @@ async function main(debugFlag?: string, showFlag?: string) {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             })
-
+            
             //console.log ('Test ' + isCurrency ("$1,199,692"))
-            console.log ('v1.0 Running')
+            console.log ('v1.1 Running')
+            
 
             const variables = { address: "global" }
-            const now = new Date();
             const c_today = now
             const date = now.toISOString().split("T")[0]; // get a path-safe date
 
@@ -405,52 +425,58 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
             //#ecosystem-team - C04B1PCTXEH
             //#wg-imx-user-rewards - C03NCT02NLC
             //#deal-cryptoslam - C03AT6FF1GQ
-            
-            console.log ('Check Slack token length - ' + web.token?.length)
-            const resultSlackUpload = await web.files.uploadV2({
+
+            var slack_input = {
                 file: screenshotPath,  // also accepts Buffer or ReadStream
-                filename: "cryptoslam - "+ date + ".png",
+                filename: "cryptoslam_immutable - "+ date + ".png",
                 // Note that channels still works but going with channel_id="C12345" is recommended.
                 // channels="C111,C222" is no longer supported. In this case, an exception will be thrown 
-                channel_id: 'C03AT6FF1GQ', //prod - C03AT6FF1GQ // testing - C04B1PCTXEH
+                channel_id: 'C04B1PCTXEH', //prod - C03AT6FF1GQ // testing - C04B1PCTXEH
                 initial_comment: summarymsg,
-                title: 'Cryptoslam data check - ' + date
-            });
-            // `result may contain multiple files uploaded
-            console.log('File(s) uploaded: ', resultSlackUpload.files);
+                title: 'Immutable + Cryptoslam data issue - ' + date
+            }
+            
+            //posting to deal-cryptoslam channel
+            if (debugFlag?.includes("dc")) {
+                slack_input.channel_id = 'C03AT6FF1GQ'
+                console.log ('Check Slack token length - ' + web.token?.length)
+                const resultSlackUpload = await web.files.uploadV2(slack_input);
+                // `result may contain multiple files uploaded
+                console.log('Post to #deal-cryptoslam slack channel: ', resultSlackUpload.files);
+            }
+
+            //posting to team-partnerships channel
+            if (debugFlag?.includes("tp")) {
+                slack_input.channel_id = 'C04B1PCTXEH'
+                console.log ('Check Slack token length - ' + web.token?.length)
+                const resultSlackUpload = await web.files.uploadV2(slack_input);
+                // `result may contain multiple files uploaded
+                console.log('Post to #team-partnerships slack channel: ', resultSlackUpload.files);
+            }
+            
             
             //posting to WG rewards channel
-            if (maxpctError > 0.05) { //prod 0.5 //test 1.0
-                const resultSlackUpload2 = await web.files.uploadV2({
-                    file: screenshotPath,  // also accepts Buffer or ReadStream
-                    filename: "cryptoslam - "+ date + ".png",
-                    // Note that channels still works but going with channel_id="C12345" is recommended.
-                    // channels="C111,C222" is no longer supported. In this case, an exception will be thrown 
-                    channel_id: 'C03NCT02NLC', 
-                    initial_comment: summarymsg,
-                    title: 'Cryptoslam data check - ' + date
-                });
-                console.log('File(s) uploaded: ', resultSlackUpload2.files);
-                }         
+            if (debugFlag?.includes("wr")) {
+                slack_input.channel_id = 'C03NCT02NLC'
+                if (maxpctError > internal_error_threshold) { //prod 0.5 //test 1.0
+                    const resultSlackUpload2 = await web.files.uploadV2(slack_input);
+                    console.log('Post to #WG-Rewards slack channel:', resultSlackUpload2.files);
+                    }    
+            }     
             
             const errormsg = `Data discrepancy > 5% in last 24 hours (Cryptoslam v Immutascan)
 • Last 24 hours (Rank ${twentyfourhourranking}) -  ${formatterCurrency.format(c_twentyfourhourTradeVolume)} v  ${formatterCurrency.format(i_twentyfourhourTradeVolume)} (${formatterPercentage.format(pct24hrVolume)}) 
 • Last 7 days   (Rank ${sevendayranking}) -  ${formatterCurrency.format(c_sevendayTradeVolume)} v  ${formatterCurrency.format(i_sevendayTradeVolume)} (${formatterPercentage.format(pct7dayVolume)}) 
 • Last 30 days  (Rank ${thirtydayranking}) - ${formatterCurrency.format(c_thirtydayTradeVolume)} v ${formatterCurrency.format(i_thirtydayTradeVolume)} (${formatterPercentage.format(pct30dayVolume)})`
 
+            if (debugFlag?.includes("ci")) {
             //posting to Cryptoslam shared comms channel
-            if (pct24hrVolume < -0.05) { //prod 0.5 //test 1.0
-                const resultSlackUpload2 = await web.files.uploadV2({
-                    file: screenshotPath,  // also accepts Buffer or ReadStream
-                    filename: "cryptoslam_immutable - "+ date + ".png",
-                    // Note that channels still works but going with channel_id="C12345" is recommended.
-                    // channels="C111,C222" is no longer supported. In this case, an exception will be thrown 
-                    channel_id: 'C02LJPASEKE', 
-                    initial_comment: errormsg,
-                    title: 'Immutable + Cryptoslam data issue - ' + date
-                });
-                console.log('File(s) uploaded: ', resultSlackUpload2.files);
-                }     
+                slack_input.channel_id = 'C02LJPASEKE'
+                if (pct24hrVolume < -external_error_threshold) { //prod 0.5 //test 1.0
+                    const resultSlackUpload2 = await web.files.uploadV2(slack_input);
+                    console.log('Post to #cryptoslam-immutable slack channel: ', resultSlackUpload2.files);
+                    }   
+            }          
 
         return {
           statusCode: 200,
@@ -472,6 +498,7 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
           }
     } else {
         const result = await web.chat.postMessage({
+            //Posting to #team-partnerships
             channel: 'C04B1PCTXEH', //prod - C03AT6FF1GQ // testing - C04B1PCTXEH
             text: 'Error in Cryptotracker job',
             });

@@ -16,6 +16,12 @@ Built to automate the cryptoslam reporting. This tool generates a screenshot of 
 ## Debug Mode
 `npx ts-node ./src/lambda-scraper.ts -d true` to execute the app.
 
+Adjust debug input to post to various slack channels
+dc - #deal-cryptoslam
+tp - #team-partnerships
+wr - #WG-Rewards
+ci - #cryptoslam-immutable
+
 ## Show Mode
 `npx ts-node ./src/lambda-scraper.ts -s true` to execute the app.
 
