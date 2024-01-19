@@ -412,7 +412,7 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
             }
             
             //exit here if debub flag is set to true
-            if (slack_output == "None") {
+            if (slack_output == "none") {
                 console.log("Debug mode complete. No post to slack")
                 return {
                     statusCode: 200,
