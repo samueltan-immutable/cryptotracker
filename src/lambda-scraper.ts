@@ -31,6 +31,7 @@ const immmutascanGraphQLAPIKey = process.env.IMMUTASCAN_GRAPHQL_APIKEY;
 //Slack message error threshold 
 const internal_error_threshold = Number(process.env.INTERNAL_ERROR_THRESHOLD);
 const external_error_threshold = Number(process.env.EXTERNAL_ERROR_THRESHOLD);
+const slack_output = process.env.SLACK_OUTPUT;
 
 const web = new WebClient(token);
 
@@ -44,8 +45,6 @@ function delay(time: number) {
 
 async function main(debugFlag?: string, showFlag?: string) {
     let attempt = 0;
-    if (debugFlag == "") {debugFlag = process.env.DEBUG }
-    else debugFlag = "tp"
 
     do {
       attempt++;
@@ -95,7 +94,7 @@ async function main(debugFlag?: string, showFlag?: string) {
             })
             
             //console.log ('Test ' + isCurrency ("$1,199,692"))
-            console.log ('v1.1 Running')
+            console.log ('v1.2 CryptoTracker Running')
             
 
             const variables = { address: "global" }
@@ -105,18 +104,18 @@ async function main(debugFlag?: string, showFlag?: string) {
             var lastmonthdate = new Date();
             lastmonthdate.setDate(1);
             let lastmonthdatestring = lastmonthdate.toISOString().split("T")[0];
-            console.log('Lastmonth Date ' + lastmonthdatestring)
-            console.log('Date ' + date)
+            if (debugFlag =="true") {console.log('Lastmonth Date ' + lastmonthdatestring)}
+            if (debugFlag =="true") {console.log('Date ' + date)}
             if (date.substring(0, 7) == lastmonthdatestring.substring(0, 7)) {
-                console.log('Dates are the same ' + lastmonthdate)
+                if (debugFlag =="true") {console.log('Dates are the same ' + lastmonthdate)}
                 lastmonthdate.setMonth(lastmonthdate.getMonth()-1);
-                console.log('Change month ' + lastmonthdate)
+                if (debugFlag =="true") {console.log('Change month ' + lastmonthdate)}
                 lastmonthdatestring = lastmonthdate.toISOString().split("T")[0];
             }
             let browser
             
             if (showFlag == "true") {
-                console.log('Launching visible puppeteer')
+                if (debugFlag =="true") {console.log('Launching visible puppeteer')}
                 browser = await puppeteer.launch({
                     //use the installed browser instead of Puppeteer's built in one
                     //executablePath: '/usr/bin/google-chrome',
@@ -134,7 +133,7 @@ async function main(debugFlag?: string, showFlag?: string) {
             } 
             else if (showFlag == "docker") 
             {
-                console.log('Launching docker puppeteer')
+                if (debugFlag =="true") {console.log('Launching docker puppeteer')}
                 browser = await puppeteer.launch({
                     //use the installed browser instead of Puppeteer's built in one
                     executablePath: '/usr/bin/google-chrome',
@@ -154,7 +153,7 @@ async function main(debugFlag?: string, showFlag?: string) {
                 });    
             } else
             {
-                console.log('Launching headless default puppeteer')
+                if (debugFlag =="true") {console.log('Launching headless default puppeteer')}
                 browser = await puppeteer.launch({
                     //use the installed browser instead of Puppeteer's built in one
                     //executablePath: '/usr/bin/chromium-browser',
@@ -167,32 +166,32 @@ async function main(debugFlag?: string, showFlag?: string) {
             }
             
             //Take screenshot
-            console.log('Setup target divs')
+            if (debugFlag =="true") {console.log('Setup target divs')}
             const screenshotPath = "img/cryptoslam - "+ date + ".png";                       
             const url = "https://www.cryptoslam.io"
             
-            console.log("Opening cryptoslam...")
+            if (debugFlag =="true") {console.log("Opening cryptoslam...")}
             const page = await browser.newPage();
-            console.log('Opening page: ' + url)
+            if (debugFlag =="true") {console.log('Opening page: ' + url)}
             await page.goto(url);
-            console.log("Waiting for 1 second...")
+            if (debugFlag =="true") {console.log("Waiting for 1 second...")}
             await delay(1000);
           
-            console.log("Get specific protocol ranking table on the page...")
+            if (debugFlag =="true") {console.log("Get specific protocol ranking table on the page...")}
             if (rankingTable == undefined) return {
                 statusCode: 400,
                 body: 'Error: missing ranking table css config'
               }
             const table = await page.$(rankingTable); // get the table
 
-            console.log("Take screenshot...")
+            if (debugFlag =="true") {console.log("Take screenshot...")}
             await table?.screenshot({
                 path: screenshotPath,
             });
-            console.log("Screenshot saved to: ./" + screenshotPath);
+            if (debugFlag =="true") {console.log("Screenshot saved to: ./" + screenshotPath)}
 
             //Pull data from ranking table
-            console.log("Getting Cryptoslam data...")
+            if (debugFlag =="true") {console.log("Getting Cryptoslam data...")}
             
             if (dailyDataTable == undefined) return {
                 statusCode: 400,
@@ -206,9 +205,7 @@ async function main(debugFlag?: string, showFlag?: string) {
                 })})
             
             //added console logging to debug issues
-            if (debugFlag == "true") {
-                console.table(datatwentyfourhr)
-            }
+            if (debugFlag == "true") {console.table(datatwentyfourhr)}
 
             //transpose table
             datatwentyfourhr = datatwentyfourhr[0].map((_, colIndex) => datatwentyfourhr.map(row => row[colIndex]));
@@ -222,25 +219,24 @@ async function main(debugFlag?: string, showFlag?: string) {
             let i: number = 0
 
             //added console logging to debug issues
-            if (debugFlag == "true") {
-                console.log(datatwentyfourhr.length)
-            }
+            if (debugFlag == "true") {console.log(datatwentyfourhr.length)}
+
             while ((i<datatwentyfourhr.length) && (i %2===0)) {
                 twentyfourHourTradingData.push({"chain": datatwentyfourhr[i].toString(), "tradevol": datatwentyfourhr[i+1].toString()})
                 i=i+2;
             }
-            console.table(twentyfourHourTradingData)
+            if (debugFlag =="true") {console.table(twentyfourHourTradingData)}
 
             let c_twentyfourhourTradeVolume: number = 0
             let twentyfourhourranking: number = 0
             let c_imx_twentyfourhour = twentyfourHourTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
             twentyfourhourranking  = twentyfourHourTradingData.findIndex(chain => chain.chain ==="ImmutableX")+1
-            console.log ('24Hr ranking - ' + twentyfourhourranking)
+            if (debugFlag =="true") {console.log ('24Hr ranking - ' + twentyfourhourranking)}
             c_twentyfourhourTradeVolume = Number(c_imx_twentyfourhour.tradevol.replace(/[^0-9.-]+/g, ''))
-            console.log('24Hr trade volume - ' + c_imx_twentyfourhour.tradevol)
+            if (debugFlag =="true") {console.log('24Hr trade volume - ' + c_imx_twentyfourhour.tradevol)}
                         
             //7 day data from table
-            console.log('Processing 7 day data')
+            if (debugFlag =="true") {console.log('Processing 7 day data')}
 
             if (sevenDaySelector == undefined) return {
                 statusCode: 400,
@@ -270,16 +266,16 @@ async function main(debugFlag?: string, showFlag?: string) {
                 sevenDayTradingData.push({"chain": dataSevenDay[i].toString(), "tradevol": dataSevenDay[i+1].toString()})
                 i=i+2;
             }
-            console.table(sevenDayTradingData)
+            if (debugFlag =="true") {console.table(sevenDayTradingData)}
 
             let c_sevendayTradeVolume: number = 0
             let sevendayranking: number = 0
             //check if IMX in the top 20 list and use the data there
             let c_imx_sevenday = sevenDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
             sevendayranking = sevenDayTradingData.findIndex((value) => value.chain === "ImmutableX") +1
-            console.log ('7 Day ranking - ' + sevendayranking)
+            if (debugFlag =="true") {console.log ('7 Day ranking - ' + sevendayranking)}
             c_sevendayTradeVolume = Number(c_imx_sevenday.tradevol.replace(/[^0-9.-]+/g, ''))
-            console.log('7 Day trade volume - ' + c_imx_sevenday.tradevol)
+            if (debugFlag =="true") {console.log('7 Day trade volume - ' + c_imx_sevenday.tradevol)}
 
 
             if (thirtyDaySelector == undefined) return {
@@ -310,25 +306,29 @@ async function main(debugFlag?: string, showFlag?: string) {
                 thirtyDayTradingData.push({"chain": dataThirtyDay[i].toString(), "tradevol": dataThirtyDay[i+1].toString()})
                 i=i+2;
             }
-            console.table(thirtyDayTradingData)
+            if (debugFlag =="true") {console.table(thirtyDayTradingData)}
 
             let c_thirtydayTradeVolume: number = 0
             let thirtydayranking: number = 0
             //check if IMX in the top 20 list and use the data there
             let c_imx_thirtyday = thirtyDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
             thirtydayranking = thirtyDayTradingData.findIndex((value) => value.chain === "ImmutableX")+1
-            console.log ('30 Day ranking - ' + thirtydayranking)
+            if (debugFlag =="true") {console.log ('30 Day ranking - ' + thirtydayranking)}
             c_thirtydayTradeVolume = Number(c_imx_thirtyday.tradevol.replace(/[^0-9.-]+/g, ''))
-            console.log('30 Day trade volume - ' + c_imx_thirtyday.tradevol)
+            if (debugFlag =="true") {
+                console.log('30 Day trade volume - ' + c_imx_thirtyday.tradevol)
         
-            console.log("")  
-            console.log("Cryptoslam data retrieved")
+                console.log("")  
+                console.log("Cryptoslam data retrieved")
+            }
             //clean up puppeteer
             await page.close();
             await browser.close();  
-            console.log("") 
+            if (debugFlag =="true") {
+                console.log("") 
             
-            console.log("Getting Immutascan data...")
+                console.log("Getting Immutascan data...")
+            }
             const data: any = await gotScraping(immmutascanGraphQLEndpoint as string, {
                 // we are expecting a JSON response back
                 responseType: 'json',
@@ -350,26 +350,26 @@ async function main(debugFlag?: string, showFlag?: string) {
             if (now.getUTCHours() < 10) posfortoday +=1
 
             let i_twentyfourhourTradeVolume = data.body["data"]["getMetricsAll"]["items"][posfortoday]["trade_volume_usd"];
-            console.log("Immutascan trade volume: " + formatterCurrency.format(i_twentyfourhourTradeVolume) + " on: " + immutascanTradeDate)
+            if (debugFlag =="true") {console.log("Immutascan trade volume: " + formatterCurrency.format(i_twentyfourhourTradeVolume) + " on: " + immutascanTradeDate)}
 
             //let temp7day = data.body["data"]["getMetricsAll"]["items"].slice(2,9)
             //let temp30day = data.body["data"]["getMetricsAll"]["items"].slice(2,32)
             //console.table(temp7day)
 
             let i_sevendayTradeVolume = data.body["data"]["getMetricsAll"]["items"].slice(posfortoday,posfortoday+7).reduce((previous:any, current:any)=> previous+current.trade_volume_usd,0);
-            console.log ('Immutascan - 7 Day data: Volume of trades - ' + formatterCurrency.format(i_sevendayTradeVolume))
+            if (debugFlag =="true") {console.log ('Immutascan - 7 Day data: Volume of trades - ' + formatterCurrency.format(i_sevendayTradeVolume))}
             let i_sevendayTradeTrades = data.body["data"]["getMetricsAll"]["items"].slice(posfortoday,posfortoday+7).reduce((previous:any, current:any)=> previous+current.trade_count,0);
-            console.log ('Immutascan - 7 Day data: Number of trades - ' + formatterLargeNumber.format(i_sevendayTradeTrades))
+            if (debugFlag =="true") {console.log ('Immutascan - 7 Day data: Number of trades - ' + formatterLargeNumber.format(i_sevendayTradeTrades))}
 
             //console.table(temp30day)
             let i_thirtydayTradeVolume = data.body["data"]["getMetricsAll"]["items"].slice(posfortoday,posfortoday+30).reduce((previous:any, current:any)=> previous+current.trade_volume_usd,0);
-            console.log ('Immutascan - 30 Day data: Volume of trades - ' + formatterCurrency.format(i_thirtydayTradeVolume))
+            if (debugFlag =="true") {console.log ('Immutascan - 30 Day data: Volume of trades - ' + formatterCurrency.format(i_thirtydayTradeVolume))}
             let i_thirtydayTradeTrades = data.body["data"]["getMetricsAll"]["items"].slice(posfortoday,posfortoday+30).reduce((previous:any, current:any)=> previous+current.trade_count,0);
-            console.log ('Immutascan - 30 Day data: Number of trades - ' + formatterLargeNumber.format(i_thirtydayTradeTrades))
+            if (debugFlag =="true") {console.log ('Immutascan - 30 Day data: Number of trades - ' + formatterLargeNumber.format(i_thirtydayTradeTrades))}
 
-            console.log("Immutascan data retrieved")
+            if (debugFlag =="true") {console.log("Immutascan data retrieved")}
 
-            console.log ('Daily summary - ' + date)
+            if (debugFlag =="true") {console.log ('Daily summary - ' + date)}
             const pct24hrVolume = (c_twentyfourhourTradeVolume/i_twentyfourhourTradeVolume)-1
             const pct7dayVolume = (c_sevendayTradeVolume/i_sevendayTradeVolume)-1
             const pct30dayVolume = (c_thirtydayTradeVolume/i_thirtydayTradeVolume)-1
@@ -382,7 +382,7 @@ async function main(debugFlag?: string, showFlag?: string) {
                 {"tracker": "Immutascan", "date":immutascanTradeDate.toISOString().split("T")[0], "tradevol24hr_usd": formatterCurrency.format(i_twentyfourhourTradeVolume), "tradevol7day_usd":formatterCurrency.format(i_sevendayTradeVolume), "tradevol30day_usd":formatterCurrency.format(i_thirtydayTradeVolume)},
                 {"tracker": "Cr/Im", "date":date, "tradevol24hr_usd": formatterPercentage.format(pct24hrVolume), "tradevol7day_usd":formatterPercentage.format(pct7dayVolume), "tradevol30day_usd":formatterPercentage.format(pct30dayVolume)}
             ]
-            console.table(tradingData);
+            if (debugFlag =="true") {console.table(tradingData)}
 
             //Output for slack message
             console.log(`Quick data check (Cryptoslam v Immutascan)`)			
@@ -406,61 +406,64 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
             //#deal-cryptoslam - https://hooks.slack.com/services/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
             //#ecosytem team - https://hooks.slack.com/services/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
             //Example curl -X POST -H 'Content-type: application/json' --data '{"text":"Hello, World!"}' https://hooks.slack.com/services/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
-            
-            console.log('Check Slack auth')
-            console.log (await web.auth.test())
+            if (debugFlag =="true") {
+                console.log('Check Slack auth')
+                console.log (await web.auth.test())
+            }
             
             //exit here if debub flag is set to true
-            if (debugFlag == "true") {
+            if (slack_output == "None") {
                 console.log("Debug mode complete. No post to slack")
                 return {
                     statusCode: 200,
                     body: 'Debug complete'
                   }
+            } else {
+                if (debugFlag =="true") {
+                    console.log("Posting to Slack...")
+                    console.log ('Check Slack token length - ' + web.token?.length)
+                }
             }
-            
-            console.log("Posting to Slack...")
 
             //Slack SDK push to post message and upload file
             //#ecosystem-team - C04B1PCTXEH
             //#wg-imx-user-rewards - C03NCT02NLC
             //#deal-cryptoslam - C03AT6FF1GQ
+            //#cryptoslam-immutable - C02LJPASEKE
 
             var slack_input = {
                 file: screenshotPath,  // also accepts Buffer or ReadStream
                 filename: "cryptoslam_immutable - "+ date + ".png",
-                // Note that channels still works but going with channel_id="C12345" is recommended.
-                // channels="C111,C222" is no longer supported. In this case, an exception will be thrown 
                 channel_id: 'C04B1PCTXEH', //prod - C03AT6FF1GQ // testing - C04B1PCTXEH
                 initial_comment: summarymsg,
                 title: 'Immutable + Cryptoslam data issue - ' + date
             }
             
             //posting to deal-cryptoslam channel
-            if (debugFlag?.includes("dc")) {
+            if (slack_output?.includes("dc")) {
                 slack_input.channel_id = 'C03AT6FF1GQ'
-                console.log ('Check Slack token length - ' + web.token?.length)
                 const resultSlackUpload = await web.files.uploadV2(slack_input);
-                // `result may contain multiple files uploaded
-                console.log('Post to #deal-cryptoslam slack channel: ', resultSlackUpload.files);
+                console.log('Post to #deal-cryptoslam slack channel')
+                if (debugFlag =="true") {console.log('Posted to #deal-cryptoslam slack channel: ', resultSlackUpload.files)}
             }
 
             //posting to team-partnerships channel
-            if (debugFlag?.includes("tp")) {
+            if (slack_output?.includes("tp") || slack_output == null || slack_output == "") {
                 slack_input.channel_id = 'C04B1PCTXEH'
-                console.log ('Check Slack token length - ' + web.token?.length)
                 const resultSlackUpload = await web.files.uploadV2(slack_input);
                 // `result may contain multiple files uploaded
-                console.log('Post to #team-partnerships slack channel: ', resultSlackUpload.files);
+                console.log('Post to #team-partnerships slack channel')
+                if (debugFlag =="true") {console.log('Posted to #team-partnerships slack channel: ', resultSlackUpload.files)}
             }
             
             
             //posting to WG rewards channel
-            if (debugFlag?.includes("wr")) {
+            if (slack_output?.includes("wr")) {
                 slack_input.channel_id = 'C03NCT02NLC'
                 if (maxpctError > internal_error_threshold) { //prod 0.5 //test 1.0
                     const resultSlackUpload2 = await web.files.uploadV2(slack_input);
-                    console.log('Post to #WG-Rewards slack channel:', resultSlackUpload2.files);
+                    console.log('Post to #WG-Rewards slack channel')
+                    if (debugFlag =="true") {console.log('Posted to #WG-Rewards slack channel:', resultSlackUpload2.files)}
                     }    
             }     
             
@@ -469,12 +472,13 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
 • Last 7 days   (Rank ${sevendayranking}) -  ${formatterCurrency.format(c_sevendayTradeVolume)} v  ${formatterCurrency.format(i_sevendayTradeVolume)} (${formatterPercentage.format(pct7dayVolume)}) 
 • Last 30 days  (Rank ${thirtydayranking}) - ${formatterCurrency.format(c_thirtydayTradeVolume)} v ${formatterCurrency.format(i_thirtydayTradeVolume)} (${formatterPercentage.format(pct30dayVolume)})`
 
-            if (debugFlag?.includes("ci")) {
+            if (slack_output?.includes("ci")) {
             //posting to Cryptoslam shared comms channel
                 slack_input.channel_id = 'C02LJPASEKE'
                 if (pct24hrVolume < -external_error_threshold) { //prod 0.5 //test 1.0
                     const resultSlackUpload2 = await web.files.uploadV2(slack_input);
-                    console.log('Post to #cryptoslam-immutable slack channel: ', resultSlackUpload2.files);
+                    console.log('Post to #cryptoslam-immutable slack channel')
+                    if (debugFlag =="true") {console.log('Posted to #cryptoslam-immutable slack channel: ', resultSlackUpload2.files)}
                     }   
             }          
 

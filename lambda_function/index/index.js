@@ -48,7 +48,7 @@ exports.handler = async (event, context) => {
                             "value": "daily"                        
                         },
                         {
-                            "name": "DEBUG",
+                            "name": "SLACK_OUTPUT",
                             "value": "ciwgdc"                        
                         },
                         {

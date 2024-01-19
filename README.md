@@ -29,20 +29,10 @@ Set the CSS reference for the Ranking table without header row in .env
 Set the frequency for how often the job should be posting to slack in .env
 `SLACK_FREQ='daily'`
 
-Set the debug options in .env
-`DEBUG='ciwgdc'`
+Set the slack channels the job should be posting to .env
+`SLACK_OUTPUT='tp'`
 
-Set the error thresholds in .env
-`INTERNAL_ERROR_THRESHOLD='0.05'`
-`EXTERNAL_ERROR_THRESHOLD='0.05'`
-
-## Run
-`npx ts-node ./src/lambda-scraper.ts` to execute the app.
-
-## Debug Mode
-`npx ts-node ./src/lambda-scraper.ts -d true` to execute the app.
-
-Adjust debug input to post to various slack channels
+Adjust slack input to post to various slack channels
 dc - #deal-cryptoslam
 tp - #team-partnerships
 wr - #WG-Rewards
@@ -50,8 +40,19 @@ ci - #cryptoslam-immutable
 
 You can append multiple destinations to send to two places i.e. 'dctpwr' will send to #deal-cryptoslam, #team-partnerships and #WG-Rewards
 
+Set the error thresholds in .env
+`INTERNAL_ERROR_THRESHOLD='0.05'`
+`EXTERNAL_ERROR_THRESHOLD='0.05'`
+
+
+## Run
+`npx ts-node ./src/lambda-scraper.ts` to execute the app.
+
+## Debug Mode
+`npx ts-node ./src/lambda-scraper.ts -d true` to execute the app with full debug output to console.
+
 ## Show Mode
-`npx ts-node ./src/lambda-scraper.ts -s true` to execute the app.
+`npx ts-node ./src/lambda-scraper.ts -s true` to execute the app with browser showing.
 
 ## Docker Build
 Needs to be run on a Windows PC
