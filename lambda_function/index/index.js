@@ -45,10 +45,26 @@ exports.handler = async (event, context) => {
                         },
                         {
                             "name": "SLACK_FREQ",
-                            "value": "daily"                        
+                            "value": "all"                        
                         },
                         {
-                            "name": "SLACK_OUTPUT",
+                            "name": "SLACK_DAILY_RUNHOUR",
+                            "value": "1"                        
+                        },
+                        {
+                            "name": "SLACK_WEEKLY_RUNDAY",
+                            "value": "0"                        
+                        },
+                        {
+                            "name": "SLACK_WEEKLY_OUTPUT",
+                            "value": "None"                        
+                        },
+                        {
+                            "name": "SLACK_HOURLY_OUTPUT",
+                            "value": "tp"                        
+                        },
+                        {
+                            "name": "SLACK_DAILY_OUTPUT",
                             "value": "ciwgdc"                        
                         },
                         {

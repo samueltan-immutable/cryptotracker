@@ -26,11 +26,22 @@ Set the CSS reference for the Thirty Day button in .env
 Set the CSS reference for the Ranking table without header row in .env
 `CSS_RANKING_TABLE='.css-4spr0x > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1)'`
 
-Set the frequency for how often the job should be posting to slack in .env
+Set the frequency for how often the job should be posting to slack in .env. Options are 'daily', 'weekly', 'hourly' or 'all'
 `SLACK_FREQ='daily'`
 
-Set the slack channels the job should be posting to .env
-`SLACK_OUTPUT='tp'`
+Set the UTC hour of the day to post the slack message if run daily or weekly in .env
+`SLACK_DAILY_RUNHOUR='1'`
+
+Set the slack channels the job should be posting to if set to hourly output in .env
+`SLACK_HOURLY_OUTPUT='tp'`
+
+Set the slack channels the job should be posting to if set to daily output in .env
+`SLACK_DAILY_OUTPUT='tp'`
+
+Set the slack channels the job should be posting to if set to weekly output in .env
+`SLACK_WEEKLY_OUTPUT='tp'`
+
+Weekly ouput setting will override daily which will override hourly on that particular run i.e. if set to output all. The daily slack output setting would be used when current hour = SLACK_DAILY_RUNHOUR
 
 Adjust slack input to post to various slack channels
 dc - #deal-cryptoslam
