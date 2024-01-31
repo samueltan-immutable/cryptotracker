@@ -31,7 +31,11 @@ const immmutascanGraphQLAPIKey = process.env.IMMUTASCAN_GRAPHQL_APIKEY;
 //Slack message error threshold 
 const internal_error_threshold = Number(process.env.INTERNAL_ERROR_THRESHOLD);
 const external_error_threshold = Number(process.env.EXTERNAL_ERROR_THRESHOLD);
-const slack_output = process.env.SLACK_OUTPUT;
+const slack_daily_output = process.env.SLACK_DAILY_OUTPUT;
+const slack_weekly_output = process.env.SLACK_WEEKLY_OUTPUT;
+const slack_hourly_output = process.env.SLACK_HOURLY_OUTPUT;
+const slack_daily_runhour= Number(process.env.SLACK_DAILY_RUNHOUR);
+const slack_weekly_runday= Number(process.env.SLACK_WEEKLY_RUNDAY);
 
 const web = new WebClient(token);
 
@@ -45,23 +49,33 @@ function delay(time: number) {
 
 async function main(debugFlag?: string, showFlag?: string) {
     let attempt = 0;
+    let slack_output = slack_hourly_output
 
     do {
       attempt++;
       try {
+        //console.log ('Test ' + isCurrency ("$1,199,692"))
+        console.log ('v1.3 CryptoTracker Running')
+        
         const now = new Date();
         const freqFlag = process.env.SLACK_FREQ
-        if ((freqFlag == 'daily') && (now.getUTCHours() != 0)) {
-            return {
-                statusCode: 200,
-                body: 'Skip: not the right time to run'
-              }
-        } else if ((freqFlag == 'weekly') && (now.getDay() != 0)) {
+        if (freqFlag == 'daily') {            
+            slack_output = slack_daily_output
+            if (now.getUTCHours() != slack_daily_runhour) {
             return {
                 statusCode: 200,
                 body: 'Skip: not the right time to run'
               }
             }
+        } else if ((freqFlag == 'weekly')) {
+            slack_output = slack_weekly_output
+            if (now.getDay() != slack_weekly_runday) {
+            return {
+                statusCode: 200,
+                body: 'Skip: not the right time to run'
+                }
+            }
+        }
         
         const GET_LATEST = gql`
             query getMetricsAll($address: String!) {
@@ -92,10 +106,7 @@ async function main(debugFlag?: string, showFlag?: string) {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             })
-            
-            //console.log ('Test ' + isCurrency ("$1,199,692"))
-            console.log ('v1.2 CryptoTracker Running')
-            
+                        
 
             const variables = { address: "global" }
             const c_today = now
@@ -412,7 +423,7 @@ Max error rate ${formatterPercentage.format(maxpctError)}`
             }
             
             //exit here if debub flag is set to true
-            if (slack_output == "none") {
+            if (slack_output == "None" || slack_output =="" || slack_output == null) {
                 console.log("Debug mode complete. No post to slack")
                 return {
                     statusCode: 200,
