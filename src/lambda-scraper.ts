@@ -8,6 +8,7 @@ import { gotScraping } from 'got-scraping';
 import './utils/env';
 import { WebClient } from '@slack/web-api';
 
+const chain_name= process.env.CHAIN_NAME;
 const token = process.env.SLACK_TOKEN;
 // selectors
 //ranking table on the main page right hand section
@@ -36,6 +37,7 @@ const slack_weekly_output = process.env.SLACK_WEEKLY_OUTPUT;
 const slack_hourly_output = process.env.SLACK_HOURLY_OUTPUT;
 const slack_daily_runhour= Number(process.env.SLACK_DAILY_RUNHOUR);
 const slack_weekly_runday= Number(process.env.SLACK_WEEKLY_RUNDAY);
+
 
 const web = new WebClient(token);
 
@@ -240,8 +242,8 @@ async function main(debugFlag?: string, showFlag?: string) {
 
             let c_twentyfourhourTradeVolume: number = 0
             let twentyfourhourranking: number = 0
-            let c_imx_twentyfourhour = twentyfourHourTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
-            twentyfourhourranking  = twentyfourHourTradingData.findIndex(chain => chain.chain ==="ImmutableX")+1
+            let c_imx_twentyfourhour = twentyfourHourTradingData.filter(chain=> chain.chain ===chain_name)[0]
+            twentyfourhourranking  = twentyfourHourTradingData.findIndex(chain => chain.chain ===chain_name)+1
             if (debugFlag =="true") {console.log ('24Hr ranking - ' + twentyfourhourranking)}
             c_twentyfourhourTradeVolume = Number(c_imx_twentyfourhour.tradevol.replace(/[^0-9.-]+/g, ''))
             if (debugFlag =="true") {console.log('24Hr trade volume - ' + c_imx_twentyfourhour.tradevol)}
@@ -282,8 +284,8 @@ async function main(debugFlag?: string, showFlag?: string) {
             let c_sevendayTradeVolume: number = 0
             let sevendayranking: number = 0
             //check if IMX in the top 20 list and use the data there
-            let c_imx_sevenday = sevenDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
-            sevendayranking = sevenDayTradingData.findIndex((value) => value.chain === "ImmutableX") +1
+            let c_imx_sevenday = sevenDayTradingData.filter(chain=> chain.chain ===chain_name)[0]
+            sevendayranking = sevenDayTradingData.findIndex((value) => value.chain === chain_name) +1
             if (debugFlag =="true") {console.log ('7 Day ranking - ' + sevendayranking)}
             c_sevendayTradeVolume = Number(c_imx_sevenday.tradevol.replace(/[^0-9.-]+/g, ''))
             if (debugFlag =="true") {console.log('7 Day trade volume - ' + c_imx_sevenday.tradevol)}
@@ -322,8 +324,8 @@ async function main(debugFlag?: string, showFlag?: string) {
             let c_thirtydayTradeVolume: number = 0
             let thirtydayranking: number = 0
             //check if IMX in the top 20 list and use the data there
-            let c_imx_thirtyday = thirtyDayTradingData.filter(chain=> chain.chain ==="ImmutableX")[0]
-            thirtydayranking = thirtyDayTradingData.findIndex((value) => value.chain === "ImmutableX")+1
+            let c_imx_thirtyday = thirtyDayTradingData.filter(chain=> chain.chain ===chain_name)[0]
+            thirtydayranking = thirtyDayTradingData.findIndex((value) => value.chain === chain_name)+1
             if (debugFlag =="true") {console.log ('30 Day ranking - ' + thirtydayranking)}
             c_thirtydayTradeVolume = Number(c_imx_thirtyday.tradevol.replace(/[^0-9.-]+/g, ''))
             if (debugFlag =="true") {

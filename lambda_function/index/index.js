@@ -20,6 +20,10 @@ exports.handler = async (event, context) => {
                             "value": await SecretsManager.getSecret('prod/cryptotracker/slack', 'us-west-2')
                         },
                         {
+                            "name": "CHAIN_NAME",
+                            "value": "Immutable"
+                        },
+                        {
                             "name": "CSS_RANKING_TABLE_WHEADER",
                             "value": ".css-1ayfwsn > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1)"
                         },

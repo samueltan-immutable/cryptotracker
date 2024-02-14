@@ -11,6 +11,9 @@ Built to automate the cryptoslam reporting. This tool generates a screenshot of 
 * Replace 'slack-token' in `.env` file with your bot slack-token (read more [here](https://api.slack.com/authentication/token-types#bot)) 
 
 ## Customize
+Set network name in Cryptoslam in .env
+`CHAIN_NAME='Immutable'`
+
 Set to slack auth token in .env
 `SLACK_TOKEN='slack-token'`
 
