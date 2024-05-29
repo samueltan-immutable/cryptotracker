@@ -25,7 +25,7 @@ exports.handler = async (event, context) => {
                         },
                         {
                             "name": "CSS_RANKING_TABLE_WHEADER",
-                            "value": ".css-1ayfwsn > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1)"
+                            "value": ".css-1uq16ku > div:nth-child(1) > div:nth-child(1)"
                         },
                         {
                             "name": "CSS_SEVEN_DAY_SELECTOR",

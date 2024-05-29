@@ -1,14 +1,26 @@
-import { checkoutSdk, config } from '@imtbl/sdk';
+import { config, orderbook } from "@imtbl/sdk";
 
-// Create a new Immutable SDK configuration
-const baseConfig = {
-  environment: config.Environment.SANDBOX,
-  publishableKey: 'pk_imapik-L--e-1rok@51IIf@FZVK',
-};
+// https://sphere.market/immutable/collection/0x2483CD7f6bdE4cC603cd9587273692791E7B0569
+const CONTRACT_ADDRESS = "0x2483CD7f6bdE4cC603cd9587273692791E7B0569"; 
 
-// Instantiate the Checkout SDKs with the default configurations
-const checkout = new checkoutSdk.Checkout({
-  baseConfig,
-  isBridgeEnabled: true,
-  // ... other configurations
-});
+(async () => {
+  try {
+    const client = new orderbook.Orderbook({
+      baseConfig: {
+        environment: config.Environment.PRODUCTION,
+      },
+    });
+
+    const listOfListings = await client.listListings({
+      sellItemContractAddress: CONTRACT_ADDRESS,
+      status: orderbook.OrderStatusName.FILLED,
+      pageSize: 100, // change pageSize to get more responses
+    });
+
+    console.log(listOfListings);
+    process.exit(0);
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
+})();

@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "@google-cloud/bigquery": "^7.6.0",
+    "@google-cloud/storage": "^7.10.1",
     "@slack/bolt": "^3.12.2",
     "dotenv": "^16.0.3",
     "graphql-tag": "^2.12.6",
